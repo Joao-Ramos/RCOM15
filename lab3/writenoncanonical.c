@@ -9,9 +9,10 @@
   #include <stdlib.h>
   #include <unistd.h>
   #include <signal.h>
+  #include "writenoncanonical.h"
 
   #define BAUDRATE B9600
-  #define MODEMDEVICE "/dev/ttyS4"
+  #define MODEMDEVICE "/dev/ttyS5"
   #define _POSIX_SOURCE 1 /* POSIX compliant source */
   #define FALSE 0
   #define TRUE 1
@@ -109,9 +110,8 @@
 
   }
 
-  int main(int argc, char** argv)
-  {
 
+  int openConf(char* porta){
       int fd, res;
       struct termios oldtio,newtio;
 
@@ -122,7 +122,7 @@
       (void) signal(SIGALRM, alarm_handler);
       
       
-      if ( (argc < 2) || 
+      /*if ( (argc < 2) || 
     	     ((strcmp("/dev/ttyS4", argv[1])!=0) && 
               (strcmp("/dev/ttyS5", argv[1])!=0) && 
     	      (strcmp("/dev/ttyS1", argv[1])!=0) && 
@@ -137,9 +137,9 @@
       because we don't want to get killed if linenoise sends CTRL-C.
     */
 
-      fd = open(argv[1], O_RDWR | O_NOCTTY );
+      fd = open(porta, O_RDWR | O_NOCTTY );
 
-      if (fd <0) {perror(argv[1]); exit(-1); }
+      if (fd <0) {perror(porta); exit(-1); }
 
       if ( tcgetattr(fd,&oldtio) == -1) { /* save current port settings */
         perror("tcgetattr");
@@ -185,7 +185,7 @@
       }
 
      //write
-      printf("Write something to send!\n");
+      printf("Write something: ");
       strcpy(buf,"");
       gets(buf);
 
