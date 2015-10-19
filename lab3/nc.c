@@ -163,12 +163,19 @@ char buf1[255];
 
     strcpy(buf1,"");
     
-
+    char ant1, ant2;
     while (STOP==FALSE) {       /* loop for input */
       res = read(fd,buf,1);
 
-      if(buf[0]== FLAG){
-        receive_set(fd,1);
+      ant1 = ant2;
+      ant2 = buf[0];
+      
+      if (ant1 == FLAG && ant2 == A_SEND) {
+          if(buf[0] == C_SET) {
+	    receive_set(fd,1);
+          }
+	  else if (buf[0] == 0|1)
+	  
       }
       else{
          strncat(buf1, buf, res);

@@ -19,7 +19,22 @@ int llopen(int port, int flag){
 	strcpy(sPort,"");
 	sprintf(sPort, "/dev/ttyS%d",port);
 
-	appLayer.fileDescriptor = port;
+	appLayer.status = flag;
+	ll.port = sPort;
+
+	printf("%s\n",sPort);
+	return openConf(sPort);
+
+ 
+}
+
+int llwrite(char* inf){
+
+	char sPort[11];
+
+	strcpy(sPort,"");
+	sprintf(sPort, "/dev/ttyS%d",port);
+
 	appLayer.status = flag;
 	ll.port = sPort;
 
@@ -39,6 +54,8 @@ int main (int argc, char ** argv){ //argv[1] = porta (0 a 5) argv[2] = flag (0 o
 
 	int port = 0;
 	int flag = 0;
+
+        char * str[MAX_SIZE];
 
 	if (argc < 3) {
         printf("Usage:\t./app PortNumber flag\n\tex: ./app 5 1\n");
@@ -66,7 +83,17 @@ int main (int argc, char ** argv){ //argv[1] = porta (0 a 5) argv[2] = flag (0 o
 
 	if(llopen(port,flag) == -1){	
 		printf("Error llopen!\n");
+		exit(1);
 
+	}
+
+        printf("Write something: ");
+	strcpy(str,"");
+	gets(str);
+
+	if(llwrite(str) == -1){
+		printf("Error llwrite!\n");
+		exit(1);
 	}
 
 	return 0;
