@@ -10,19 +10,31 @@
   #include "writenoncanonical.h"
 
 
-int llopen(int porta){
 
-	char sPorta[11];
 
-	strcpy(sPorta,"");
-	sprintf(sPorta, "/dev/ttyS%d",porta);
-	printf("%s\n",sPorta);
-	return openConf(sPorta);
+int llopen(int port, int flag){
+
+	char sPort[11];
+
+	strcpy(sPort,"");
+	sprintf(sPort, "/dev/ttyS%d",port);
+
+	appLayer.fileDescriptor = port;
+	appLayer.status = flag;
+	ll.port = sPort;
+
+	printf("%s\n",sPort);
+	return openConf(sPort);
 
  
 }
 
 int main (int argc, char ** argv){ //argv[1] = porta (0 a 5) argv[2] = flag (0 ou 1)
+
+	
+	ll.baudrate = 9600;
+	ll.timeout = 3;
+	ll.numTransmissions = 3;
 
 
 	int port = 0;
@@ -50,7 +62,9 @@ int main (int argc, char ** argv){ //argv[1] = porta (0 a 5) argv[2] = flag (0 o
 
 	}
 
-	if(llopen(port) == -1){	
+	
+
+	if(llopen(port,flag) == -1){	
 		printf("Error llopen!\n");
 
 	}

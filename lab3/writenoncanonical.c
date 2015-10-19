@@ -11,8 +11,8 @@
   #include <signal.h>
   #include "writenoncanonical.h"
 
-  #define BAUDRATE B9600
-  #define MODEMDEVICE "/dev/ttyS5"
+//  #define BAUDRATE B9600
+//  #define MODEMDEVICE "/dev/ttyS5"
   #define _POSIX_SOURCE 1 /* POSIX compliant source */
   #define FALSE 0
   #define TRUE 1
@@ -23,8 +23,8 @@
   #define C_SET 0x07
   #define C_UA 0x03
   
-  #define TIME_ALARM 3 
-  #define ATEMPTS 3
+//  #define TIME_ALARM 3 
+//  #define ATEMPTS 3
 
   volatile int STOP=FALSE;
   volatile int STOP_REC=FALSE;
@@ -110,10 +110,57 @@
 
   }
 
+  int newConfig(int fd){
 
-  int openConf(char* porta){
+      struct termios newtio;
+
+      bzero(&newtio, sizeof(newtio));
+      newtio.c_cflag = ll.baudRate | CS8 | CLOCAL | CREAD;
+      newtio.c_iflag = IGNPAR;
+      newtio.c_oflag = 0;
+      /* set input mode (non-canonical, no echo,...) */
+      newtio.c_lflag = 0;
+      newtio.c_cc[VTIME]    = ll.timeout * 10;   /* inter-character timer unused */
+      newtio.c_cc[VMIN]     = 0;   /* blocking read until 5 chars received */
+
+    /* 
+      VTIME e VMIN devem ser alterados de forma a proteger com um temporizador a 
+      leitura do(s) próximo(s) caracter(es)
+    */
+
+
+
+      tcflush(fd, TCIOFLUSH);
+      if ( tcsetattr(fd,TCSANOW,&newtio) == -1) {
+        perror("tcsetattr");
+        exit(-1);
+      }
+
+      printf("New termios structure set\n");
+
+      return 0;
+  }
+
+  int prepare_set(int fd){
+
+    while (re_send < ll.numTransmissions){
+        if(flag_al){
+           alarm(ll.timeout);
+           printf("SENDING n%d!\n",(re_send+1));
+           flag_al=0;
+           if(send_set(fd) != 0){
+             printf("Error: no acknowledgment received (UA)!\n");
+           }
+           else break;
+         
+      }
+    }
+
+  }
+
+  int openConfig(char* porta){
       int fd, res;
-      struct termios oldtio,newtio;
+      struct termios oldtio;
 
       char buf[255];
       char buf1[255];
@@ -145,44 +192,18 @@
         perror("tcgetattr");
         exit(-1);
       }
-      bzero(&newtio, sizeof(newtio));
-      newtio.c_cflag = BAUDRATE | CS8 | CLOCAL | CREAD;
-      newtio.c_iflag = IGNPAR;
-      newtio.c_oflag = 0;
-      /* set input mode (non-canonical, no echo,...) */
-      newtio.c_lflag = 0;
-      newtio.c_cc[VTIME]    = TIME_ALARM * 10;   /* inter-character timer unused */
-      newtio.c_cc[VMIN]     = 0;   /* blocking read until 5 chars received */
-
-    /* 
-      VTIME e VMIN devem ser alterados de forma a proteger com um temporizador a 
-      leitura do(s) próximo(s) caracter(es)
-    */
-
-
-
-      tcflush(fd, TCIOFLUSH);
-      if ( tcsetattr(fd,TCSANOW,&newtio) == -1) {
+   
+      if(newConfig(fd) != 0){
         perror("tcsetattr");
         exit(-1);
       }
-
-      printf("New termios structure set\n");
-   
       
       //send SET
-      while (re_send < ATEMPTS){
-        if(flag_al){
-           alarm(TIME_ALARM);
-           printf("SENDING n%d!\n",(re_send+1));
-           flag_al=0;
-           if(send_set(fd) != 0){
-             printf("Error: no acknowledgment received (UA)!\n");
-           }
-           else break;
-         
-        }
+      if(prepare_set(fd) != 0){
+
       }
+
+      
 
      //write
       printf("Write something: ");
@@ -209,7 +230,8 @@
 
       printf("Received: %s\n", buf1);
 
-     sleep(5);
+      sleep(5);
+
       if ( tcsetattr(fd,TCSANOW,&oldtio) == -1) {
         perror("tcsetattr");
         exit(-1);

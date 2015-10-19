@@ -2,6 +2,7 @@
 #define WRITENONCANONICAL_H
 
 #define MAX_SIZE 255
+
 struct applicationLayer {
 
 	int fileDescriptor;	/*Descritor correspondente à porta série*/
@@ -22,8 +23,14 @@ struct linkLayer {
 };
 
 int openConf(char * porta);
+int newConfig(int fd);
+int send_set(int fd);
+int receive_ua(int fd);
+int prepare_set(int fd);
 
 int ola(void);
 
+struct applicationLayer appLayer;
+struct linkLayer ll;
 
 #endif
