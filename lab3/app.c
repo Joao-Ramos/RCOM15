@@ -21,27 +21,28 @@ int llopen(int port, int flag){
 
 	appLayer.status = flag;
 	ll.port = sPort;
-
+	printf("llopen: opening ports and sending SET bytes!\n");
 	printf("%s\n",sPort);
 	return openConf(sPort);
 
  
 }
 
-int llwrite(char* inf){
+int llwrite(char* str){
 
-	char sPort[11];
+	
 
-	strcpy(sPort,"");
-	sprintf(sPort, "/dev/ttyS%d",port);
-
-	appLayer.status = flag;
-	ll.port = sPort;
-
-	printf("%s\n",sPort);
-	return openConf(sPort);
+	printf("llwrite: sending info!\n");
+	return prepare_inf(str);
 
  
+}
+
+int llclose(){
+
+	closeConfig();
+	return 0;
+
 }
 
 int main (int argc, char ** argv){ //argv[1] = porta (0 a 5) argv[2] = flag (0 ou 1)
@@ -87,12 +88,17 @@ int main (int argc, char ** argv){ //argv[1] = porta (0 a 5) argv[2] = flag (0 o
 
 	}
 
-        printf("Write something: ");
+    printf("Write something: ");
 	strcpy(str,"");
 	gets(str);
 
 	if(llwrite(str) == -1){
 		printf("Error llwrite!\n");
+		exit(1);
+	}
+
+	if(llclose() == -1){
+		printf("Error llclose!\n");
 		exit(1);
 	}
 

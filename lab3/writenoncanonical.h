@@ -24,13 +24,16 @@ struct linkLayer {
 
 };
 
-int saveConfig(char* porta);
-int newConfig();
+int byte_stuffing(char* seq);
+int receive_RR(int control);
+int send_inf(int control);
+int prepare_inf(char* inf);
 int send_set();
 int receive_ua();
 int prepare_set();
-int prepare_inf(int control, char* inf);
-
+int saveConfig(char* porta);
+int newConfig();
+int closeConfig();
 
 struct applicationLayer appLayer;
 struct linkLayer ll;
