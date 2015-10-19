@@ -24,6 +24,7 @@ struct linkLayer {
 
 };
 
+//writenoncanonical.c methods
 int byte_stuffing(char* seq);
 int receive_RR(int control);
 int send_inf(int control);
@@ -31,9 +32,19 @@ int prepare_inf(char* inf);
 int send_set();
 int receive_ua();
 int prepare_set();
-int saveConfig(char* porta);
+int saveConfig();
 int newConfig();
 int closeConfig();
+
+//nc.c methods
+int byte_destuffing();
+int send_rr(int control);
+int receive_inf(int control);
+int send_ua();
+int receive_set(int count);
+int saveConfigNC();
+int newConfigNC();
+int closeConfigNC();
 
 struct applicationLayer appLayer;
 struct linkLayer ll;

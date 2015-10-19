@@ -17,6 +17,8 @@
   
   #define FLAG 0x7e
   #define ESC 0x7d
+  #define AFT_ESC 0x5d 
+  #define AFT_FLAG 0x5e
   #define A_SEND 0x03   //sender comand
   #define A_REC 0x01  // receiver command
   #define C_SET 0x07
@@ -79,8 +81,7 @@
       printf("Stuffed count2+1 bytes!\n");
 
          
-      return 0;
-    
+      return 0;    
 
   }
  
@@ -341,7 +342,7 @@
 
 
 
-  int saveConfig(char* porta){
+  int saveConfig(){
       int res;
       
 
@@ -367,11 +368,11 @@
       because we don't want to get killed if linenoise sends CTRL-C.
     */
 
-      appLayer.fd = open(porta, O_RDWR | O_NOCTTY );
+      appLayer.fd = open(ll.port, O_RDWR | O_NOCTTY );
 
-      if (appLayer.fd <0) {perror(porta); exit(-1); }
+      if (appLayer.fd <0) {perror(ll.port); exit(-1); }
 
-      if ( tcgetattr(appLayer.fd,&oldtio) == -1) { /* save current port settings */
+      if ( tcgetattr(appLayer.fd,&oldtio1) == -1) { /* save current port settings */
         perror("tcgetattr");
         exit(-1);
       }
@@ -454,7 +455,7 @@
 
       sleep(5);
 
-      if ( tcsetattr(appLayer.fd,TCSANOW,&oldtio) == -1) {
+      if ( tcsetattr(appLayer.fd,TCSANOW,&oldtio1) == -1) {
         perror("tcsetattr");
         exit(-1);
       }
