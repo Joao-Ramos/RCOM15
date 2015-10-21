@@ -65,7 +65,7 @@ int main (int argc, char ** argv){ //argv[1] = porta (0 a 5) argv[2] = flag (0 o
 	int port = 0;
 	int flag = 0;
 
-        char * str[MAX_SIZE];
+    char str[MAX_SIZE];
 
 	if (argc < 3) {
         printf("Usage:\t./app PortNumber flag\n\tex: ./app 5 1\n");

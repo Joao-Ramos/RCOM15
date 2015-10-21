@@ -250,7 +250,7 @@
    int receive_ua(){
 
       int res; 
-      char buf[255];
+      char buf[MAX_SIZE];
       int count = 0;
 
       strcpy(buf,"");
@@ -310,7 +310,7 @@
     SET[4] = FLAG;
 
     //SEND SET
-    write(appLayer.fd,SET_STUF,5);
+    write(appLayer.fd,SET_STUF,6);
     printf("Sent SET\n");
 
     //RECEIVE UA

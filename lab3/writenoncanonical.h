@@ -37,11 +37,13 @@ int newConfig();
 int closeConfig();
 
 //nc.c methods
+int receive_ua_nc();
+int send_disc();
 int byte_destuffing();
 int send_rr(int control);
-int receive_inf(int control);
 int send_ua();
-int receive_set(int count);
+int receive_inf(int count, int control);
+int prepare_inf_nc(int control); // control: 0->RECEIVE SET ; 1->INF INI; 2->INF FIN; 3->DISC.
 int saveConfigNC();
 int newConfigNC();
 int closeConfigNC();
