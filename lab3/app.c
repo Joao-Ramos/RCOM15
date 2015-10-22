@@ -14,21 +14,35 @@
 
 int llopen(int port, int flag){
 
-	char sPort[11];
+	char sPort[20];
 
 	strcpy(sPort,"");
 	sprintf(sPort, "/dev/ttyS%d",port);
 
 	appLayer.status = flag;
-	ll.port = sPort;
+	strcpy(ll.port,sPort);
 
 	printf("llopen: opening ports and sending SET bytes!\n");
 	printf("%s\n",ll.port);
-	if(appLayer.status == 0)
-	return openConf(ll.port);
-	else openConfNC(ll.port);
 
- 
+	if(appLayer.status == 0){
+		if(saveConfig(ll.port) != 0)
+			return -1;
+		if(newConfig() != 0)	
+			return -1;
+		return prepare_set();
+		
+	}
+	else {
+		if(saveConfigNC(ll.port) != 0)
+			return -1;
+		if(newConfigNC() != 0)	
+			return -1;
+		return 0;
+		
+	}
+
+	return -1; 
 }
 
 int llwrite(char* str){
@@ -44,11 +58,13 @@ int llwrite(char* str){
 int llread(){
 
 	printf("llread: reading info!\n");
-	return receive_inf();
+	return prepare_inf_nc(0);
+
 }
 
 int llclose(){
 
+	
 	closeConfig();
 	return 0;
 
@@ -57,7 +73,7 @@ int llclose(){
 int main (int argc, char ** argv){ //argv[1] = porta (0 a 5) argv[2] = flag (0 ou 1)
 
 	
-	ll.baudrate = 9600;
+	ll.baudRate = 9600;
 	ll.timeout = 3;
 	ll.numTransmissions = 3;
 
@@ -96,6 +112,7 @@ int main (int argc, char ** argv){ //argv[1] = porta (0 a 5) argv[2] = flag (0 o
 		exit(1);
 
 	}
+	printf("Received UA!\n");
 	if(flag == 0){
 	    printf("Write something: ");
 		strcpy(str,"");
@@ -107,7 +124,8 @@ int main (int argc, char ** argv){ //argv[1] = porta (0 a 5) argv[2] = flag (0 o
 		}
 	}
 	else{
-
+	
+		llread();
 
 	}
 
@@ -116,6 +134,8 @@ int main (int argc, char ** argv){ //argv[1] = porta (0 a 5) argv[2] = flag (0 o
 		exit(1);
 	}
 
+
+	
 	return 0;
 
 }

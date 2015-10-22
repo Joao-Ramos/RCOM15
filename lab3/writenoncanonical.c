@@ -9,28 +9,9 @@
   #include <stdlib.h>
   #include <unistd.h>
   #include <signal.h>
-  #include "writenoncanonical.h"
-
-  #define _POSIX_SOURCE 1 /* POSIX compliant source */
-  #define FALSE 0
-  #define TRUE 1
-  
-  #define FLAG 0x7e
-  #define ESC 0x7d
-  #define AFT_ESC 0x5d 
-  #define AFT_FLAG 0x5e
-  #define A_SEND 0x03   //sender comand
-  #define A_REC 0x01  // receiver command
-  #define C_SET 0x07
-  #define C_UA 0x03
-  #define C_SI 0x00
-  #define C_SF 0x20
-  #define C_RRI 0x21
-  #define C_RRF 0x01
-  #define C_REJ 0x25
+  #include "writenoncanonical.h" 
   
 
-  volatile int STOP=FALSE;
   volatile int STOP_REC=FALSE;
 
   int re_send = 0, flag_al = 1;
@@ -43,8 +24,6 @@
   
   int byte_stuffing(char* seq){
      
- 
-      int res;
       int count1 = 0;
       int count2 = 4;
 
@@ -60,12 +39,12 @@
          if(seq[count1] == FLAG){
                ll.frame[count2] = ESC;
                count2++;
-	             ll.frame[count2] = 0x5e;
+	       ll.frame[count2] = 0x5e;
                count2++;                            
 	       }
          else if(seq[count1] == ESC){
                ll.frame[count2] = ESC;
-	             count2++;
+	       count2++;
                ll.frame[count2] = 0x5d;
                count2++;
          }
@@ -73,12 +52,13 @@
                ll.frame[count2] = seq[count1];
                count2++;
          }
-         count1++;           
+         count1++;
       }
 
       ll.frame[count2] = ll.frame[3];
       ll.frame[count2+1] = FLAG;
-      printf("Stuffed count2+1 bytes!\n");
+      printf("Stuffed %d bytes!\n",count2+2);
+      ll.sequenceNumber = count2+2;
 
          
       return 0;    
@@ -91,6 +71,7 @@
 
 	char buf[1];
 	int res;
+	int count = 0;
 
 	if(control == 0) {
 		while (1) {
@@ -139,7 +120,7 @@
 	else if(control == 1){
 		while (1) {
 			res = read(appLayer.fd,buf,1);
-		
+			printf("%x\n",buf[res-1]);
 			if(res == 0)
 			   return -1;
 
@@ -178,7 +159,7 @@
 		}
 
 
-  }
+  	}
 
 	return -1;
 
@@ -188,8 +169,8 @@
 
 
   int send_inf(int control){
-    printf("Sending information!\n");
-    write(appLayer.fd,ll.frame,strlen(ll.frame));
+    printf("Sending %d bytes!\n",ll.sequenceNumber);
+    write(appLayer.fd,ll.frame,ll.sequenceNumber);
     if(control == 0)
       return receive_RR(0);
     else
@@ -221,7 +202,7 @@
     }
     else{
       ll.frame[2] = C_SF;
-      ll.frame[3] = C_SF^A^SEND;
+      ll.frame[3] = C_SF^A_SEND;
       re_send = 0;
       while (re_send < ll.numTransmissions){
         if(flag_al){
@@ -310,7 +291,7 @@
     SET[4] = FLAG;
 
     //SEND SET
-    write(appLayer.fd,SET_STUF,6);
+    write(appLayer.fd,SET,6);
     printf("Sent SET\n");
 
     //RECEIVE UA
@@ -343,85 +324,25 @@
 
 
   int saveConfig(){
-      int res;
-      
-
-      char buf[MAX_SIZE*2];
-      char buf1[MAX_SIZE];
-      char rec[MAX_SIZE];
 
       (void) signal(SIGALRM, alarm_handler);
       
-      
-      /*if ( (argc < 2) || 
-    	     ((strcmp("/dev/ttyS4", argv[1])!=0) && 
-              (strcmp("/dev/ttyS5", argv[1])!=0) && 
-    	      (strcmp("/dev/ttyS1", argv[1])!=0) && 
-    	      (strcmp("/dev/ttyS0", argv[1])!=0) )) {
-        printf("Usage:\tnserial SerialPort\n\tex: nserial /dev/ttyS1\n");
-        exit(1);
-      }
-
-
-    /*
-      Open serial port device for reading and writing and not as controlling tty
-      because we don't want to get killed if linenoise sends CTRL-C.
-    */
-
       appLayer.fd = open(ll.port, O_RDWR | O_NOCTTY );
 
       if (appLayer.fd <0) {perror(ll.port); exit(-1); }
 
-      if ( tcgetattr(appLayer.fd,&oldtio1) == -1) { /* save current port settings */
+      if ( tcgetattr(appLayer.fd,&oldtio) == -1) { /* save current port settings */
         perror("tcgetattr");
         exit(-1);
       }
    
-      /*if(newConfig() != 0){
-        perror("tcsetattr");
-        exit(-1);
-      }
-      
-      //send SET
-      if(prepare_set() != 0){
-	printf("Error: no aknowledgment received after %d tries! (UA) Shuting down...\n", ll.numTransmissions);
-	return closeConf(appLayer.fd);
-      }
-
-      
-
-     //write
-      printf("Write something: ");
-      strcpy(buf,"");
-      gets(buf);
-      byte_stuffing(buf);
-      res = write(appLayer.fd,buf,strlen(buf) + 1); 
- 
-      printf("%d bytes written\n", res);
-   
-
-    //read
-      strcpy(buf1,"");
-      strcpy(rec,"");
-      while (STOP == FALSE) {  
-             
-          res = read(appLayer.fd,rec,1);  
-          if(res != -1){
-              strncat(buf1,rec,res);
-              if (rec[res-1]=='\0') STOP = TRUE;
-	      else rec[res]=0;
-          }
-      }
-
-      printf("Received: %s\n", buf1);
-    */
       return 0;
   }
 
   int newConfig(){
 
       struct termios newtio;
-
+	printf("New Config");
       bzero(&newtio, sizeof(newtio));
       newtio.c_cflag = ll.baudRate | CS8 | CLOCAL | CREAD;
       newtio.c_iflag = IGNPAR;
@@ -433,10 +354,8 @@
 
     /* 
       VTIME e VMIN devem ser alterados de forma a proteger com um temporizador a 
-      leitura do(s) próximo(s) caracter(es)
+      leitura do(s) proximo(s) caracter(es)
     */
-
-
 
       tcflush(appLayer.fd, TCIOFLUSH);
       if ( tcsetattr(appLayer.fd,TCSANOW,&newtio) == -1) {
@@ -455,7 +374,7 @@
 
       sleep(5);
 
-      if ( tcsetattr(appLayer.fd,TCSANOW,&oldtio1) == -1) {
+      if ( tcsetattr(appLayer.fd,TCSANOW,&oldtio) == -1) {
         perror("tcsetattr");
         exit(-1);
       }

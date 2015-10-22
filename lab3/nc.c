@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include "writenoncanonical.h"
 
-#define _POSIX_SOURCE 1 /* POSIX compliant source */
+/*#define _POSIX_SOURCE 1 // POSIX compliant source 
 #define FALSE 0
 #define TRUE 1
 
@@ -26,11 +26,10 @@
 #define C_SF 0x20
 #define C_RRI 0x21
 #define C_RRF 0x01
-#define C_REJ 0x25
- 
+#define C_REJ 0x25*/
 
+int set = 0;
 volatile int STOP=FALSE;
-volatile int STOP_REC=FALSE;
 
 
 int receive_ua_nc(){
@@ -40,6 +39,7 @@ int receive_ua_nc(){
       int count = 0;
 
       strcpy(buf,"");
+     
       while (1) {
         res = read(appLayer.fd,buf,1);
 
@@ -70,9 +70,11 @@ int receive_ua_nc(){
             else count=0;
                   break;
               case 4:
-            if(buf[res-1] == FLAG)
+            if(buf[res-1] == FLAG){
               printf("Received UA and closing down!\n");
+	      set = 0;
               return closeConfigNC();
+	    }
             else count=0;
                   break;
         }
@@ -81,9 +83,8 @@ int receive_ua_nc(){
       return -1;
     
 
-  }
-
 }
+
 
 
 int send_disc(){
@@ -99,89 +100,13 @@ int send_disc(){
   return 1;
 }
 
-/*int byte_destuffing(int state){
-
-  int count_buf = 0;
-  int count = 0;
-  char buf[MAX_SIZE*2];
-
-
-  for(count = 0; count < strlen(ll.frame); count++) {
-    printf("%x\n",ll.frame[count]);
-    switch (state){
-
-    case 0:
-      if(ll.frame[count] == FLAG)
-        state = 1;
-      else state = 0;
-      break;
-
-    case 1:
-      if(ll.frame[count] == A_SEND)
-        state = 2;
-      else if (ll.frame[count] == FLAG) state = 1;
-      else state = 0;
-      break;
-
-    case 2:
-      if(ll.frame[count] == C_SI || ll.frame[count] == C_SF)
-        state = 3;
-      else if (ll.frame[count] == FLAG) state = 1;
-      else state = 0;
-      break;
-
-    case 3:
-      if(ll.frame[count] == C_SI^A_SEND || ll.frame[count] == C_SF^A_SEND)
-        state = 4;
-      else if (ll.frame[count] == FLAG) state = 1;
-      else state = 0;
-      break;
-      
-    case 4:
-      if(ll.frame[count] == ESC && ll.frame[count+1] == AFT_FLAG){
-        buf[count_buf] = FLAG;
-        count++;
-      }
-      else if(ll.frame[count] == ESC && ll.frame[count+1] == AFT_ESC){
-        buf[count_buf] = ESC;
-        count++;
-      }
-      else if(ll.frame[count] == C_SI^A_SEND || ll.frame[count] == C_SF^A_SEND)
-        state = 5;
-      else buf[count_buf] = ll.frame[count];
-      break;
-    case 5:
-      if(ll.frame[count] == FLAG){
-        strcpy(ll.frame,buf);
-        printf("Successfully destuffed bytes and saved message in ll.frame!\n");
-        return 0;
-      }
-      else{
-        buf[count_buf] = ll.frame[count-1];
-        count_buf++;
-        buf[count_buf] == ll.frame[count];
-        state = 4;
-      }
-      break;
-    default:
-      printf("Error byte_destuffing: state is not between 0 and 4!\n");
-      break;
-    }
-
-    count_buf++;
-
-  }
-  printf("The string you wanted to destuff doesn't end on BCC2 and FLAG!\n");
-    
-  return -1;
-}*/
 
 int send_rr(int control){
 
   char RR[5];
   RR[0] = FLAG;
   RR[1] = A_SEND;
-  if(control == 1){
+  if(control == 0){
     RR[2] = C_RRI;
   }
   else{
@@ -206,6 +131,7 @@ int send_ua() {
     UA[4] = FLAG;
 
     //SEND UA
+    set = 1;
     write(appLayer.fd,UA,5);
     printf("Sent response!\n");
 
@@ -214,113 +140,137 @@ int send_ua() {
 
 int receive_inf(int control){
 
-  int state = 0
-  int res, count;
+  int state = 0;
+  int res = 0;
   int count_buf = 0;
-  int fin_control = control;
   char buf[MAX_SIZE];   
+  char ant[1];
 
   //RECEIVE INF
   strcpy(buf,"");
     
-  for(count = 0; count < strlen(ll.frame); count++) {
-	
-  	printf("%x\n", ll.frame[count]);
+  while(STOP == FALSE) {
+	res = read(appLayer.fd,buf,1);
+
+  	printf("%x\n", buf[res-1]);
   	switch(state){
   	case 0:
-	    if(ll.frame[count] == FLAG) 
-        state++;  
+	    if(buf[res-1] == FLAG)
+        	state++;  
+	    count_buf = 0;
+            ll.sequenceNumber = 0;
       break; 
     
     case 1:
-      if(ll.frame[count] == A_SEND) 
+      if(buf[res-1] == A_SEND) 
         state++; 
-      else if(ll.frame[count] == FLAG) 
+      else if(buf[res-1] == FLAG) 
         break; 
       else state=0; 
         break; 
         
     case 2:
-      if(ll.frame[count] == C_SET) 
+      if(buf[res-1] == C_SET) 
         state++; 
-      else if(ll.frame[count] == C_SI && control > 0){
+      else if(buf[res-1] == C_SI && set == 1){
         state = 5;
-        fin_control = 1;
       } 
-      else if(ll.frame[count] == C_SF && control == 2){
+      else if(buf[res-1] == C_SF && control == 1 && set == 1){
         state=5;
-        fin_control = control;
       }
-      else if (ll.frame[count] == C_DISC)
+      else if (buf[res-1] == C_DISC)
         state=8;
-      else if(ll.frame[count] == FLAG) 
+      else if(buf[res-1] == FLAG) 
         state=1; 
       else state=0; 
       break; 
      
     case 3:
-      if(ll.frame[count] == (A_SEND^C_SET)) 
+      if(buf[res-1] == (A_SEND^C_SET)) 
         state++; 
-      else if (ll.frame[count] == FLAG)
+      else if (buf[res-1] == FLAG)
 	      state = 1;
       else state = 0;
         break; 
     
     case 4:
-      if (ll.frame[count] == FLAG) {
+      if (buf[res-1] == FLAG) {
         printf("Received SET!\n");
-        return send_ua();
+	state = 0;
+        send_ua();
       }
       else state = 0;
       break;
 
     case 5:
-      if(ll.frame[count] == C_SI^A_SEND || ll.frame[count] == C_SF^A_SEND)
+      if(buf[res-1] == (C_SI^A_SEND) || buf[res-1] == (C_SF^A_SEND))
         state = 6;
-      else if (ll.frame[count] == FLAG) state = 1;
+      else if (buf[res-1] == FLAG) state = 1;
       else state = 0;
+      ant[0] = buf[res-1];
       break;
       
     case 6:
-      if(ll.frame[count] == ESC && ll.frame[count+1] == AFT_FLAG){
-        buf[count_buf] = FLAG;
-        count++;
-        count_buf++;
+      if(buf[res-1] == AFT_FLAG){
+	if(ant[0] == ESC){
+        	ll.frame[count_buf] = FLAG;
+        	count_buf++;
+	}
+	else {
+		ll.frame[count_buf] = AFT_FLAG;
+		count_buf++;
+	}
       }
-      else if(ll.frame[count] == ESC && ll.frame[count+1] == AFT_ESC){
-        buf[count_buf] = ESC;
-        count++;
-        count_buf++;
+      if(buf[res-1] == AFT_ESC){
+	if(ant[0] == ESC){
+        	ll.frame[count_buf] = ESC;
+        	count_buf++;
+	}
+	else {
+		ll.frame[count_buf] = AFT_ESC;
+		count_buf++;
+	}
       }
-      else if(ll.frame[count] == C_SI^A_SEND || ll.frame[count] == C_SF^A_SEND)
+      else if(buf[res-1] == ESC) {
+		ant[0] = ESC;
+		break;
+      }
+      else if(buf[res-1] == (C_SI^A_SEND) || buf[res-1] == (C_SF^A_SEND)){
         state = 7;
-      else {buf[count_buf] = ll.frame[count];   count_buf++;}
+        ant[0] = buf[res-1];
+      }
+      else {ll.frame[count_buf] = buf[res-1];   count_buf++;}
       break;
 
     case 7:
-      if(ll.frame[count] == FLAG){
+      if(buf[res-1] == FLAG){
         strcpy(ll.frame,buf);
         printf("Successfully destuffed bytes and saved message in ll.frame!\n");
-        return send_rr(fin_control);
+	ant[0]='\0';
+	state = 0;
+	ll.sequenceNumber = count_buf;
+        send_rr(control);
+	if(control == 0)control++;
       }
       else{
-        buf[count_buf] = ll.frame[count-1];
+        ll.frame[count_buf] = ant[0]; 
         count_buf++;
-        buf[count_buf] == ll.frame[count];
+         ll.frame[count_buf] = buf[res-1];
+	ant[0]=buf[res-1];
         count_buf++;
         state=6;
       }
       break;
 
     case 8:
-      if(ll.frame[count] == A_SEND^C_DISC)
+      if(buf[res-1] == (A_SEND^C_DISC))
         state=9;
-      else if (ll.frame[count] == FLAG) state = 1;
+      else if (buf[res-1] == FLAG) state = 1;
       else state = 0;
       break;
 
     case 9:
-      if(ll.frame[count] == FLAG){
+      if(buf[res-1] == FLAG){
         printf("Sending DISC and shutting down!\n");
         return send_disc();
 
@@ -340,49 +290,9 @@ int receive_inf(int control){
 
  }
 
- int prepare_inf_nc(int control){
-
-  int res;
-  int rec;
-
-  char buf[2];
-  char buf1[MAX_SIZE];
-  strcpy(buf,"");
-  strcpy(buf1,"");
-    
-  while (STOP==FALSE) {       /* loop for input */
-    res = read(appLayer.fd,buf,1);
-    strncat(buf1, buf, res);
-    if (buf[res-1]=='\0') STOP=TRUE;
-    else buf[res]=0;
-  }
-
-  strcpy(ll.frame,buf1);
-  rec = receive_inf(control);
-
-  if(control == 0 && rec == 0){
-    printf("Successfully received set message!\n");
-    return 0;
-  }
-  else if(rec && control == 1)){
-  
-    receive_inf(control++);
-
-  }
-  else if(rec == 0 && control == 2){
-    receive_inf(control);
-  }
-  
-  return rec;
-}
-
 
 int saveConfigNC()
 {
-    int res;
-    char buf[255];
-    char buf1[255];
-
    /* if ( (argc < 2) || 
   	     ((strcmp("/dev/ttyS0", porta)!=0) && 
   	      (strcmp("/dev/ttyS1", porta)!=0) && 
@@ -394,7 +304,7 @@ int saveConfigNC()
     }
 
 
-    /*
+    
     Open serial port device for reading and writing and not as controlling tty
     because we don't want to get killed if linenoise sends CTRL-C.
     */
@@ -411,44 +321,14 @@ int saveConfigNC()
     
 
     //RECEIVE SET
-
-
-    strcpy(buf1,"");
-    
-    char ant1, ant2;
-    while (STOP==FALSE) {       /* loop for input */
-      res = read(appLayer.fd,buf,1);
-
-      ant1 = ant2;
-      ant2 = buf[0];
-      
-      if (ant1 == FLAG && ant2 == A_SEND) {
-          if(buf[0] == C_SET) {
-            receive_set(appLayer.fd,1);
-          }
-	  else if (buf[0] == 0|1)
-	  
-      }
-      else{
-         strncat(buf1, buf, res);
-         if (buf[res-1]=='\0') STOP=TRUE;
-         else buf[res]=0;
-      }
-    }
-
-    printf("%s\n", buf1);
-    res = write(appLayer.fd,buf1,strlen(buf1) + 1);  
-    printf("%d bytes written\n", res);
-
-
-
-
-
+    return 0;
     
 }
 
 
 int newConfigNC(){
+
+    struct termios newtio;
 
     bzero(&newtio, sizeof(newtio));
     newtio.c_cflag = ll.baudRate | CS8 | CLOCAL | CREAD;
@@ -465,7 +345,7 @@ int newConfigNC(){
 
     /* 
     VTIME e VMIN devem ser alterados de forma a proteger com um temporizador a 
-    leitura do(s) próximo(s) caracter(es)
+    leitura do(s) proximo(s) caracter(es)
     */
 
 
@@ -478,12 +358,14 @@ int newConfigNC(){
     }
 
     printf("New termios structure set\n");
+
+    return 0;
  }
 
 int closeConfigNC(){
 
   tcsetattr(appLayer.fd,TCSANOW,&oldtio);
   close(appLayer.fd);
-  return 0;
+  exit(0);
  
  }
