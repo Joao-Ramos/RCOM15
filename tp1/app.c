@@ -1,10 +1,8 @@
-
-  #include "interface.h"
-
+#include "interface.h"
 
 
 
-int llopen(int port, int flag){
+int llopen(int port, int flag, char * file){
 
 	char sPort[20];
 
@@ -13,6 +11,12 @@ int llopen(int port, int flag){
 
 	appLayer.status = flag;
 	strcpy(ll.port,sPort);
+
+
+	if(readData(file) != 0){
+		printf("llopen: file doesn't exist!\n");
+		return -1;
+	}
 
 	printf("llopen: opening ports and sending SET bytes!\n");
 	printf("%s\n",ll.port);
@@ -37,14 +41,28 @@ int llopen(int port, int flag){
 	return -1; 
 }
 
-int llwrite(char* str){
+int llwrite(){
 
-	
+	int i, timeout = 0;
+	char str[MAX_SIZE];
+	strcpy(str,"");
 
-	printf("llwrite: sending info!\n");
-	return prepare_inf(str);
+	str = createCtrlPackets(0);
+	printf("llwrite: sending cp1!\n");
+	while (timeout < ll.numTransmissions){
+		if(prepare_inf(str) != 0)
+			printf("llwrite: error sending cp1! Try number %d",timeout+1);
+		else break;
+		timeout++;
+	}
 
- 
+	for(i = 0; i < fileData.numSeg; i++){
+		strcpy(str,"");
+		str = createDataPacket(i+1);
+		prepare_inf(str);
+	}
+
+
 }
 
 int llread(){
@@ -87,14 +105,20 @@ int main (int argc, char ** argv){ //argv[1] = porta (0 a 5) argv[2] = flag (0 o
 
     char str[MAX_SIZE];
 
-	if (argc < 3) {
-        printf("Usage:\t./app PortNumber flag\n\tex: ./app 5 1\n");
+	if (argc < 4) {
+        printf("Usage:\t./app PortNumber flag filePath\n\tex: ./app 5 1\n");
         exit(1);
         }
 
 	port = atoi(argv[1]);
 	flag = atoi(argv[2]);
-	printf("%d\n%d\n",port,flag);
+
+	int length = strlen(argv[3]);
+	char fp[length];
+
+	strcpy(fp,argv[3]);
+
+	printf("%d\n%d\n%s\n",port,flag,fp);
 	
 	if(port > 5 || port < 0){
 	
@@ -111,18 +135,15 @@ int main (int argc, char ** argv){ //argv[1] = porta (0 a 5) argv[2] = flag (0 o
 
 	
 
-	if(llopen(port,flag) == -1){	
+	if(llopen(port, flag, fp) == -1){	
 		printf("Error llopen!\n");
 		exit(1);
 
 	}
 
 	if(appLayer.status == 0){
-	    printf("Write something: ");
-		strcpy(str,"");
-		gets(str);
 
-		if(llwrite(str) == -1){
+		if(llwrite() == -1){
 			printf("Error llwrite!\n");
 			exit(1);
 		}

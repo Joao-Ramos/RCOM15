@@ -31,7 +31,15 @@
 #define C_REJ 0x25
 #define C_DISC 0x0b
 
-#define MAX_SIZE 255
+#define C_START 0x01
+#define C_END 0x02
+#define C_TAM_FILE 0x00
+#define C_LEN_FILE 0x01
+#define SIZE 0x08
+#define C_DATA 0x00
+
+#define MAX_SIZE 256
+#define MAX_SIZE_DATA 252
 
 struct termios oldtio;
 
@@ -56,9 +64,18 @@ struct linkLayer {
 struct data{
 
 	unsigned long dataLength;
-	char data 
+	char * data; 
+	unsigned int numSeg;
 
 };
+
+struct controlData{
+
+	unsigned long fileLength;
+	char * filePath;
+	unsigned int fpLength;
+};
+
 //writenoncanonical.c methods
 
 int send_final_ua();
@@ -87,8 +104,13 @@ int newConfigNC();
 int closeConfigNC();
 
 //fileReader.c methods
+int readData(char* filePath);
+char* createCtrlPackets(int control);
+char* createDataPacket(int segment, int size);
 
 struct applicationLayer appLayer;
 struct linkLayer ll;
+struct data fileData;
+struct controlData ctrData;
 
 #endif
