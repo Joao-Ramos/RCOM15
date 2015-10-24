@@ -1,6 +1,17 @@
 #ifndef INTERFACE_H
 #define INTERFACE_H
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <unistd.h>
+
+
 #define _POSIX_SOURCE 1 /* POSIX compliant source */
 #define FALSE 0
 #define TRUE 1
@@ -31,7 +42,6 @@ struct applicationLayer {
 
 };
 
-
 struct linkLayer {
 	
 	char port[20];	/*Dispositivo /dev/ttySx, x = 0, 1*/
@@ -43,6 +53,12 @@ struct linkLayer {
 
 };
 
+struct data{
+
+	unsigned long dataLength;
+	char data 
+
+};
 //writenoncanonical.c methods
 
 int send_final_ua();
@@ -69,6 +85,8 @@ int receive_inf(int control);
 int saveConfigNC();
 int newConfigNC();
 int closeConfigNC();
+
+//fileReader.c methods
 
 struct applicationLayer appLayer;
 struct linkLayer ll;
