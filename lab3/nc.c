@@ -72,8 +72,8 @@ int receive_ua_nc(){
               case 4:
             if(buf[res-1] == FLAG){
               printf("Received UA and closing down!\n");
-	      set = 0;
-              return closeConfigNC();
+	            set = 0;
+              return 0;
 	    }
             else count=0;
                   break;
@@ -87,7 +87,7 @@ int receive_ua_nc(){
 
 
 
-int send_disc(){
+int send_disc_nc(){
   char DISC[5];
   DISC[0] = FLAG;
   DISC[1] = A_SEND;
@@ -364,7 +364,15 @@ int newConfigNC(){
 
 int closeConfigNC(){
 
-  tcsetattr(appLayer.fd,TCSANOW,&oldtio);
+  printf("Ending program!\n");
+  
+  sleep(5);
+
+  if ( tcsetattr(appLayer.fd,TCSANOW,&oldtio) == -1) {
+    perror("tcsetattr");
+    exit(-1);
+  }
+
   close(appLayer.fd);
   exit(0);
  

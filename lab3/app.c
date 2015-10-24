@@ -58,14 +58,26 @@ int llwrite(char* str){
 int llread(){
 
 	printf("llread: reading info!\n");
-	return prepare_inf_nc(0);
+	return  receive_inf(0);
 
 }
 
 int llclose(){
 
 	
-	closeConfig();
+	if(appLayer.status == 0){
+
+		if(prepare_send_disc() != 0){
+			printf("Error closing program!\n");
+			return -1;
+		}
+	}
+	else {
+		
+		closeConfigNC();
+
+	}
+
 	return 0;
 
 }
@@ -112,8 +124,8 @@ int main (int argc, char ** argv){ //argv[1] = porta (0 a 5) argv[2] = flag (0 o
 		exit(1);
 
 	}
-	printf("Received UA!\n");
-	if(flag == 0){
+
+	if(appLayer.status == 0){
 	    printf("Write something: ");
 		strcpy(str,"");
 		gets(str);
@@ -134,8 +146,6 @@ int main (int argc, char ** argv){ //argv[1] = porta (0 a 5) argv[2] = flag (0 o
 		exit(1);
 	}
 
-
-	
 	return 0;
 
 }

@@ -44,6 +44,11 @@ struct linkLayer {
 };
 
 //writenoncanonical.c methods
+
+int send_final_ua();
+int receive_disc();
+int send_disc();
+int prepare_send_disc();
 int byte_stuffing(char* seq);
 int receive_RR(int control);
 int send_inf(int control);
@@ -57,7 +62,7 @@ int closeConfig();
 
 //nc.c methods
 int receive_ua_nc();
-int send_disc();
+int send_disc_nc();
 int send_rr(int control);
 int send_ua();
 int receive_inf(int control);

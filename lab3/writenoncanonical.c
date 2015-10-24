@@ -14,14 +14,145 @@
 
   volatile int STOP_REC=FALSE;
 
-  int re_send = 0, flag_al = 1;
+  int re_send = 0,, re_send_ti = 0, re_send_tf = 0, flag_al = 1;
 
   void alarm_handler(){
 
      flag_al = 1;
      re_send++;
   }
+
+  int send_final_ua(){
+
+    unsigned char UA[5];
+    UA[0] = FLAG;
+    UA[1] = A_SEND;
+    UA[2] = C_UA;
+    UA[3] = UA[1]^UA[2];
+    UA[4] = FLAG;
+
+    //SEND UA
+
+    write(appLayer.fd,UA,6);
+    printf("Sent response!\n");
+
+    return 0;
+
+  }
+
+  int prepare_send_final_ua(){
+
+    printf("Waiting and then sending DISC\n");
+    sleep(3);
+    re_send = 0;
+    while (re_send < ll.numTransmissions){
+      if(flag_al){
+        alarm(ll.timeout);
+        printf("SENDING DATA n%d!\n",(re_send+1));
+        flag_al=0;
+        send_final_ua();
+        else break;
+         
+      }
+    }
+
+    return closeConfig();
+  }
+
+  int receive_disc(){
+
+    char buf[1];
+    int res;
+    int count = 0;
+    printf("Waiting for final disc!\n");
+
+
+    if(control == 0) {
+      while (1) {
+        res = read(appLayer.fd,buf,1);
+    
+        if(res == 0){
+          return -1;
+        }
+        switch(count){
+        case 0:
+          if(buf[res-1] == FLAG)
+            count++;
+          break;
+
+        case 1:
+          if(buf[res-1] == A_SEND)
+             count++;
+          else if(buf[res-1] == FLAG)
+            break;
+          else count = 0;
+          break;
+
+        case 2:
+          if(buf[res-1] == C_DISC)
+             count++;
+          else if(buf[res-1] == FLAG)
+            count=1;
+          else count = 0;
+          break;
+
+        case 3:
+          if(buf[res-1] == (A_SEND^C_DISC))
+             count++;
+          else if(buf[res-1] == FLAG)
+            count=1;
+          else count = 0;
+          break;
+        case 4:
+          if(buf[res-1] == FLAG)
+             return 0;
+          else count = 0;
+          break;
+
+
+        }
+      }
+    }
+
+    return -1;
+  }
+
+  int send_disc(){
+    char DISC[5];
+    DISC[0] = FLAG;
+    DISC[1] = A_SEND;
+    DISC[2] = C_DISC;
+    DISC[3] = DISC[1]^DISC[2];
+    DISC[4] = FLAG;
+    write(appLayer.fd,DISC, 6);
+
+    return receive_disc();
+  }
   
+  int prepare_send_disc(){
+
+    int returnInt;
+
+    printf("Waiting and then sending DISC\n");
+    sleep(3);
+    re_send = 0;
+    while (re_send < ll.numTransmissions){
+      if(flag_al){
+        alarm(ll.timeout);
+        printf("SENDING DATA n%d!\n",(re_send+1));
+        flag_al=0;
+        if((returnInt=send_disc()) != 0){
+          printf("Error: no acknowledgment received from data sending (DISC)!\n");
+        }
+        else break;
+         
+      }
+    }
+
+    return prepare_send_final_ua();
+
+  }
+
   int byte_stuffing(char* seq){
      
       int count1 = 0;
@@ -183,6 +314,8 @@
      byte_stuffing(inf);
 
      int returnInt = -2;
+     printf("Waiting and then sending TI\n");
+     sleep(3);
      re_send=0;
      while (re_send < ll.numTransmissions){
         if(flag_al){
@@ -201,6 +334,8 @@
 
     }
     else{
+      printf("Waiting and then sending TF\n");
+      sleep(3);
       ll.frame[2] = C_SF;
       ll.frame[3] = C_SF^A_SEND;
       re_send = 0;
@@ -372,6 +507,7 @@
 
   int closeConfig(){
 
+      printf("Ending program!\n");
       sleep(5);
 
       if ( tcsetattr(appLayer.fd,TCSANOW,&oldtio) == -1) {
