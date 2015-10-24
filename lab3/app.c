@@ -7,7 +7,7 @@
   #include <stdlib.h>
   #include <unistd.h>
   #include <signal.h>
-  #include "writenoncanonical.h"
+  #include "interface.h"
 
 
 

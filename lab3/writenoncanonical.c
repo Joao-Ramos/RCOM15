@@ -9,7 +9,7 @@
   #include <stdlib.h>
   #include <unistd.h>
   #include <signal.h>
-  #include "writenoncanonical.h" 
+  #include "interface.h" 
   
 
   volatile int STOP_REC=FALSE;
@@ -81,7 +81,7 @@
           break;
 
         case 1:
-          if(buf[res-1] == A_SEND)
+          if(buf[res-1] == A_REC)
              count++;
           else if(buf[res-1] == FLAG)
             break;
@@ -97,7 +97,7 @@
           break;
 
         case 3:
-          if(buf[res-1] == (A_SEND^C_DISC))
+          if(buf[res-1] == (A_REC^C_DISC))
              count++;
           else if(buf[res-1] == FLAG)
             count=1;
@@ -217,7 +217,7 @@
 			       count++;
 			    break;
 			case 1:
-			    if(buf[res-1] == A_SEND)
+			    if(buf[res-1] == A_REC)
 			       count++;
 			    else if(buf[res-1] == FLAG)
 			       break;
@@ -231,7 +231,7 @@
 			    else count=0;
 			    break;
 			case 3:
-			    if(buf[res-1] == (C_RRI^A_SEND))
+			    if(buf[res-1] == (C_RRI^A_REC))
 			       count++;
 			    else if(buf[res-1] == FLAG)
 			       count=1;
@@ -261,7 +261,7 @@
 			       count++;
 			    break;
 			case 1:
-			    if(buf[res-1] == A_SEND)
+			    if(buf[res-1] == A_REC)
 			       count++;
 			    else if(buf[res-1] == FLAG)
 			       break;
@@ -275,7 +275,7 @@
 			    else count=0;
 			    break;
 			case 3:
-			    if(buf[res-1] == (C_RRF^A_SEND))
+			    if(buf[res-1] == (C_RRF^A_REC))
 			       count++;
 			    else if(buf[res-1] == FLAG)
 			       count=1;
@@ -382,7 +382,7 @@
                count++;
             break;
               case 1:
-            if(buf[res-1] == A_SEND)
+            if(buf[res-1] == A_REC)
                count++;
                   else if(buf[res-1] == FLAG)
                      break;
@@ -396,7 +396,7 @@
             else count=0;
                   break;
               case 3:
-            if(buf[res-1] == (C_UA^A_SEND))
+            if(buf[res-1] == (C_UA^A_REC))
                      count++;
                   else if(buf[res-1] == FLAG)
                      count=1;

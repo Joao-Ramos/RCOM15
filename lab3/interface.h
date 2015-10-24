@@ -1,5 +1,5 @@
-#ifndef WRITENONCANONICAL_H
-#define WRITENONCANONICAL_H
+#ifndef INTERFACE_H
+#define INTERFACE_H
 
 #define _POSIX_SOURCE 1 /* POSIX compliant source */
 #define FALSE 0

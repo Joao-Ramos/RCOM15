@@ -8,7 +8,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "writenoncanonical.h"
+#include "interface.h"
 
 /*#define _POSIX_SOURCE 1 // POSIX compliant source 
 #define FALSE 0
@@ -90,7 +90,7 @@ int receive_ua_nc(){
 int send_disc_nc(){
   char DISC[5];
   DISC[0] = FLAG;
-  DISC[1] = A_SEND;
+  DISC[1] = A_REC;
   DISC[2] = C_DISC;
   DISC[3] = DISC[1]^DISC[2];
   DISC[4] = FLAG;
@@ -105,7 +105,7 @@ int send_rr(int control){
 
   char RR[5];
   RR[0] = FLAG;
-  RR[1] = A_SEND;
+  RR[1] = A_REC;
   if(control == 0){
     RR[2] = C_RRI;
   }
@@ -125,7 +125,7 @@ int send_rr(int control){
 int send_ua() {
     unsigned char UA[5];
     UA[0] = FLAG;
-    UA[1] = A_SEND;
+    UA[1] = A_REC;
     UA[2] = C_UA;
     UA[3] = UA[1]^UA[2];
     UA[4] = FLAG;
@@ -365,7 +365,7 @@ int newConfigNC(){
 int closeConfigNC(){
 
   printf("Ending program!\n");
-  
+
   sleep(5);
 
   if ( tcsetattr(appLayer.fd,TCSANOW,&oldtio) == -1) {
