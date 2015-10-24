@@ -39,7 +39,7 @@
 #define C_DATA 0x00
 
 #define MAX_SIZE 256
-#define MAX_SIZE_DATA 252
+#define MAX_SIZE_DATA 100
 
 struct termios oldtio;
 
@@ -58,6 +58,7 @@ struct linkLayer {
 	unsigned int timeout;	/*Valor do temporizador: 1 s*/
 	unsigned int numTransmissions;	/*Número de tentativas em caso de falha*/
 	char frame[MAX_SIZE*2];	/*Trama*/
+	char compFrame[MAX_SIZE*2] /*Trama para comparar*/ //TESTAR 
 
 };
 
@@ -96,17 +97,18 @@ int closeConfig();
 //nc.c methods
 int receive_ua_nc();
 int send_disc_nc();
-int send_rr(int control);
+int send_rr(int equalize);
 int send_ua();
 int receive_inf(int control);
 int saveConfigNC();
 int newConfigNC();
 int closeConfigNC();
 
-//fileReader.c methods
+//fileOpp.c methods
 int readData(char* filePath);
 char* createCtrlPackets(int control);
 char* createDataPacket(int segment, int size);
+int saveChunk();
 
 struct applicationLayer appLayer;
 struct linkLayer ll;

@@ -8,13 +8,13 @@ int readData(char* filepath){
 	unsigned int i;
 
 	my_file = fopen (filepath, "r");
-    if (my_file == NULL)
-    {
-        printf ("File not found!\n");
-        printf ("Or filepath is wrong!\n");
-        return -1;
-    }
-    printf("Reading file and saving into a data struct\n");
+	if (my_file == NULL)
+	{
+		printf ("File not found!\n");
+		printf ("Or filepath is wrong!\n");
+		return -1;
+	}
+	printf("Reading file and saving into a data struct\n");
 
 	fseek (my_file, 0, SEEK_END);
 	fileData.dataLength = ftell (my_file);
@@ -23,15 +23,15 @@ int readData(char* filepath){
 	
 	fileData.data = (unsigned char *) malloc (sizeof(unsigned char) * fileData.dataLength);
 
-	if(fileData.dataLength%252 == 0)
-		fileData.numSeg = fileData.dataLength/252;
-	else fileData.numSeg = fileData.dataLength/252 + 1;
+	if(fileData.dataLength % MAX_SIZE_DATA == 0)
+		fileData.numSeg = fileData.dataLength/MAX_SIZE_DATA;
+	else fileData.numSeg = fileData.dataLength/MAX_SIZE_DATA + 1;
 
 	printf("Num segments: %d\n", fileData.numSeg);
 	printf("Length of file: %d\n", fileData.dataLength);
 
 	for (i = 0; i < fileData.dataLength; i++)
-	    fileData.data[i] = getc(my_file);
+		fileData.data[i] = getc(my_file);
 
 	fclose (my_file);
 

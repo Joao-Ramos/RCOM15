@@ -75,17 +75,35 @@ int send_disc_nc(){
 }
 
 
-int send_rr(int control){
+int send_rr(int equalize){
 
+  int i = 0;
   char RR[5];
+  int dif = 0;
+
   RR[0] = FLAG;
   RR[1] = A_REC;
-  if(control == 0){
+
+  if(equalize == 0){
     RR[2] = C_RRI;
+    strcpy(ll.compFrame,"");
+    for(i = 0; i < ll.sequenceNumber; i++)
+      ll.compFrame[i] = ll.frame[i];
   }
   else{
-    RR[2] = C_RRF;
+    for(i = 0; i < ll.sequenceNumber; i++)
+      if(ll.compFrame[i] != ll.frame[i])
+        dif = 1;
+
+    if(!dif){
+      save_chunk();
+      RR[2] = C_RRF;
+    }
+    else{
+      RR[2] = C_REJ;
+    }
   }
+
   RR[3] = RR[1]^RR[2];
   RR[4] = FLAG;
 
@@ -115,6 +133,7 @@ int send_ua() {
 int receive_inf(int control){
 
   int state = 0;
+  int equalize = 0;
   int res = 0;
   int count_buf = 0;
   char buf[MAX_SIZE];   
@@ -131,8 +150,8 @@ int receive_inf(int control){
   	case 0:
 	    if(buf[res-1] == FLAG)
         	state++;  
-	    count_buf = 0;
-            ll.sequenceNumber = 0;
+          count_buf = 0;
+          ll.sequenceNumber = 0;
       break; 
     
     case 1:
@@ -141,6 +160,7 @@ int receive_inf(int control){
       else if(buf[res-1] == FLAG) 
         break; 
       else state=0; 
+      strcpy(ll.frame, "");
         break; 
         
     case 2:
@@ -170,15 +190,21 @@ int receive_inf(int control){
     case 4:
       if (buf[res-1] == FLAG) {
         printf("Received SET!\n");
-	state = 0;
+        state = 0;
         send_ua();
       }
       else state = 0;
       break;
 
     case 5:
-      if(buf[res-1] == (C_SI^A_SEND) || buf[res-1] == (C_SF^A_SEND))
+      if(buf[res-1] == (C_SI^A_SEND)){ 
         state = 6;
+        equalize = 0;
+      }
+      else if(buf[res-1] == (C_SF^A_SEND)){
+        state = 6;
+        equalize = 1;
+      }
       else if (buf[res-1] == FLAG) state = 1;
       else state = 0;
       ant[0] = buf[res-1];
@@ -218,13 +244,12 @@ int receive_inf(int control){
 
     case 7:
       if(buf[res-1] == FLAG){
-        strcpy(ll.frame,buf);
         printf("Successfully destuffed bytes and saved message in ll.frame!\n");
-	ant[0]='\0';
-	state = 0;
-	ll.sequenceNumber = count_buf;
-        send_rr(control);
-	if(control == 0)control++;
+	      ant[0]='\0';
+	      state = 0;
+	      ll.sequenceNumber = count_buf;
+        send_rr(equalize);
+	      if(control == 0)control++;
       }
       else{
         ll.frame[count_buf] = ant[0]; 

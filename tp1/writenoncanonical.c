@@ -1,71 +1,71 @@
   /*Non-Canonical Input Processing*/
 
   #include "interface.h" 
-  
 
-  volatile int STOP_REC=FALSE;
 
-  int re_send = 0,, re_send_ti = 0, re_send_tf = 0, flag_al = 1;
+volatile int STOP_REC=FALSE;
 
-  void alarm_handler(){
+int re_send = 0,, re_send_ti = 0, re_send_tf = 0, flag_al = 1;
 
-     flag_al = 1;
-     re_send++;
-  }
+void alarm_handler(){
 
-  int send_final_ua(){
+ flag_al = 1;
+ re_send++;
+}
 
-    unsigned char UA[5];
-    UA[0] = FLAG;
-    UA[1] = A_SEND;
-    UA[2] = C_UA;
-    UA[3] = UA[1]^UA[2];
-    UA[4] = FLAG;
+int send_final_ua(){
+
+  unsigned char UA[5];
+  UA[0] = FLAG;
+  UA[1] = A_SEND;
+  UA[2] = C_UA;
+  UA[3] = UA[1]^UA[2];
+  UA[4] = FLAG;
 
     //SEND UA
 
-    write(appLayer.fd,UA,6);
-    printf("Sent response!\n");
+  write(appLayer.fd,UA,6);
+  printf("Sent response!\n");
 
-    return 0;
+  return 0;
 
-  }
+}
 
-  int prepare_send_final_ua(){
+int prepare_send_final_ua(){
 
-    printf("Waiting and then sending DISC\n");
-    sleep(3);
-    re_send = 0;
-    while (re_send < ll.numTransmissions){
-      if(flag_al){
-        alarm(ll.timeout);
-        printf("SENDING DATA n%d!\n",(re_send+1));
-        flag_al=0;
-        send_final_ua();
-        else break;
-         
-      }
+  printf("Waiting and then sending DISC\n");
+  sleep(3);
+  re_send = 0;
+  while (re_send < ll.numTransmissions){
+    if(flag_al){
+      alarm(ll.timeout);
+      printf("SENDING DATA n%d!\n",(re_send+1));
+      flag_al=0;
+      send_final_ua();
+      else break;
+
     }
-
-    return closeConfig();
   }
 
-  int receive_disc(){
+  return closeConfig();
+}
 
-    char buf[1];
-    int res;
-    int count = 0;
-    printf("Waiting for final disc!\n");
+int receive_disc(){
+
+  char buf[1];
+  int res;
+  int count = 0;
+  printf("Waiting for final disc!\n");
 
 
-    if(control == 0) {
-      while (1) {
-        res = read(appLayer.fd,buf,1);
-    
-        if(res == 0){
-          return -1;
-        }
-        switch(count){
+  if(control == 0) {
+    while (1) {
+      res = read(appLayer.fd,buf,1);
+
+      if(res == 0){
+        return -1;
+      }
+      switch(count){
         case 0:
           if(buf[res-1] == FLAG)
             count++;
@@ -73,7 +73,7 @@
 
         case 1:
           if(buf[res-1] == A_REC)
-             count++;
+            count++;
           else if(buf[res-1] == FLAG)
             break;
           else count = 0;
@@ -81,7 +81,7 @@
 
         case 2:
           if(buf[res-1] == C_DISC)
-             count++;
+            count++;
           else if(buf[res-1] == FLAG)
             count=1;
           else count = 0;
@@ -89,107 +89,107 @@
 
         case 3:
           if(buf[res-1] == (A_REC^C_DISC))
-             count++;
+            count++;
           else if(buf[res-1] == FLAG)
             count=1;
           else count = 0;
           break;
         case 4:
           if(buf[res-1] == FLAG)
-             return 0;
+            return 0;
           else count = 0;
           break;
 
 
-        }
       }
     }
-
-    return -1;
   }
 
-  int send_disc(){
-    char DISC[5];
-    DISC[0] = FLAG;
-    DISC[1] = A_SEND;
-    DISC[2] = C_DISC;
-    DISC[3] = DISC[1]^DISC[2];
-    DISC[4] = FLAG;
-    write(appLayer.fd,DISC, 6);
+  return -1;
+}
 
-    return receive_disc();
-  }
-  
-  int prepare_send_disc(){
+int send_disc(){
+  char DISC[5];
+  DISC[0] = FLAG;
+  DISC[1] = A_SEND;
+  DISC[2] = C_DISC;
+  DISC[3] = DISC[1]^DISC[2];
+  DISC[4] = FLAG;
+  write(appLayer.fd,DISC, 6);
 
-    int returnInt;
+  return receive_disc();
+}
 
-    printf("Waiting and then sending DISC\n");
-    sleep(3);
-    re_send = 0;
-    while (re_send < ll.numTransmissions){
-      if(flag_al){
-        alarm(ll.timeout);
-        printf("SENDING DATA n%d!\n",(re_send+1));
-        flag_al=0;
-        if((returnInt=send_disc()) != 0){
-          printf("Error: no acknowledgment received from data sending (DISC)!\n");
-        }
-        else break;
-         
+int prepare_send_disc(){
+
+  int returnInt;
+
+  printf("Waiting and then sending DISC\n");
+  sleep(3);
+  re_send = 0;
+  while (re_send < ll.numTransmissions){
+    if(flag_al){
+      alarm(ll.timeout);
+      printf("SENDING DATA n%d!\n",(re_send+1));
+      flag_al=0;
+      if((returnInt=send_disc()) != 0){
+        printf("Error: no acknowledgment received from data sending (DISC)!\n");
       }
+      else break;
+
     }
-
-    return prepare_send_final_ua();
-
   }
 
-  int byte_stuffing(char* seq){
-     
-      int count1 = 0;
-      int count2 = 4;
+  return prepare_send_final_ua();
 
-      strcpy(ll.frame,"");
+}
 
-      ll.frame[0] = FLAG;
-      ll.frame[1] = A_SEND;
-      ll.frame[2] = C_SI;
-      ll.frame[3] = ll.frame[1]^ll.frame[2];
+int byte_stuffing(char* seq){
 
-      while (count1 < strlen(seq)) {
-         printf("%x\n",seq[count1]);
-         if(seq[count1] == FLAG){
-               ll.frame[count2] = ESC;
-               count2++;
-	       ll.frame[count2] = 0x5e;
-               count2++;                            
-	       }
-         else if(seq[count1] == ESC){
-               ll.frame[count2] = ESC;
-	       count2++;
-               ll.frame[count2] = 0x5d;
-               count2++;
-         }
-         else{
-               ll.frame[count2] = seq[count1];
-               count2++;
-         }
-         count1++;
-      }
+  int count1 = 0;
+  int count2 = 4;
 
-      ll.frame[count2] = ll.frame[3];
-      ll.frame[count2+1] = FLAG;
-      printf("Stuffed %d bytes!\n",count2+2);
-      ll.sequenceNumber = count2+2;
+  strcpy(ll.frame,"");
 
-         
-      return 0;    
+  ll.frame[0] = FLAG;
+  ll.frame[1] = A_SEND;
+  ll.frame[2] = C_SI;
+  ll.frame[3] = ll.frame[1]^ll.frame[2];
 
-  }
- 
+  while (count1 < strlen(seq)) {
+   printf("%x\n",seq[count1]);
+   if(seq[count1] == FLAG){
+     ll.frame[count2] = ESC;
+     count2++;
+     ll.frame[count2] = 0x5e;
+     count2++;                            
+   }
+   else if(seq[count1] == ESC){
+     ll.frame[count2] = ESC;
+     count2++;
+     ll.frame[count2] = 0x5d;
+     count2++;
+   }
+   else{
+     ll.frame[count2] = seq[count1];
+     count2++;
+   }
+   count1++;
+ }
 
-  
-  int receive_RR(int control){
+ ll.frame[count2] = ll.frame[3];
+ ll.frame[count2+1] = FLAG;
+ printf("Stuffed %d bytes!\n",count2+2);
+ ll.sequenceNumber = count2+2;
+
+
+ return 0;    
+
+}
+
+
+
+int receive_RR(int control){
 
 	char buf[1];
 	int res;
@@ -198,316 +198,321 @@
 	if(control == 0) {
 		while (1) {
 			res = read(appLayer.fd,buf,1);
-		
+
 			if(res == 0)
-			   return -1;
+        return -1;
 
-			switch(count){
-			case 0:
-			    if(buf[res-1] == FLAG)
-			       count++;
-			    break;
-			case 1:
-			    if(buf[res-1] == A_REC)
-			       count++;
-			    else if(buf[res-1] == FLAG)
-			       break;
-			    else count=0;
-			    break;
-			case 2:
-			    if(buf[res-1] == C_RRI)
-			       count++;
-			    else if(buf[res-1] == FLAG)
-			       count=1;
-			    else count=0;
-			    break;
-			case 3:
-			    if(buf[res-1] == (C_RRI^A_REC))
-			       count++;
-			    else if(buf[res-1] == FLAG)
-			       count=1;
-			    else count=0;
-			    break;
-			case 4:
-			    if(buf[res-1] == FLAG)
-			       return 0;
-			    else count=0;
-			    break;
-			}
-		}
+      switch(count){
+        case 0:
+         if(buf[res-1] == FLAG)
+          count++;
+          break;
 
-
-	}
-
-	else if(control == 1){
-		while (1) {
-			res = read(appLayer.fd,buf,1);
-			printf("%x\n",buf[res-1]);
-			if(res == 0)
-			   return -1;
-
-			switch(count){
-			case 0:
-			    if(buf[res-1] == FLAG)
-			       count++;
-			    break;
-			case 1:
-			    if(buf[res-1] == A_REC)
-			       count++;
-			    else if(buf[res-1] == FLAG)
-			       break;
-			    else count=0;
-			    break;
-			case 2:
-			    if(buf[res-1] == C_RRF)
-			       count++;
-			    else if(buf[res-1] == FLAG)
-			       count=1;
-			    else count=0;
-			    break;
-			case 3:
-			    if(buf[res-1] == (C_RRF^A_REC))
-			       count++;
-			    else if(buf[res-1] == FLAG)
-			       count=1;
-			    else count=0;
-			    break;
-			case 4:
-			    if(buf[res-1] == FLAG)
-			       return 0;
-			    else count=0;
-			    break;
-			}
-		}
-
-
-  	}
-
-	return -1;
-
-
-  }
-
-
-
-  int send_inf(int control){
-    printf("Sending %d bytes!\n",ll.sequenceNumber);
-    write(appLayer.fd,ll.frame,ll.sequenceNumber);
-    if(control == 0)
-      return receive_RR(0);
-    else
-      return receive_RR(1);
-
-  }
-
-  int prepare_inf(char* inf){     
-
-     byte_stuffing(inf);
-
-     int returnInt = -2;
-     printf("Waiting and then sending TI\n");
-     sleep(3);
-     re_send=0;
-     while (re_send < ll.numTransmissions){
-        if(flag_al){
-           alarm(ll.timeout);
-           printf("SENDING DATA n%d!\n",(re_send+1));
-           flag_al=0;
-           if((returnInt=send_inf(0)) != 0){
-             printf("Error: no acknowledgment received from data sending (TI)!\n");
-           }
-           else break;
-         
-      }
-    }
-    if(returnInt != 0 ){
-      printf("Error during data sending\n");
-
-    }
-    else{
-      printf("Waiting and then sending TF\n");
-      sleep(3);
-      ll.frame[2] = C_SF;
-      ll.frame[3] = C_SF^A_SEND;
-      re_send = 0;
-      while (re_send < ll.numTransmissions){
-        if(flag_al){
-           alarm(ll.timeout);
-           printf("SENDING DATA n%d!\n",(re_send+1));
-           flag_al=0;
-           if((returnInt=send_inf(1)) != 0){
-             printf("Error: no acknowledgment received from data sending (TF)!\n");
-           }
-           else break;
-         
-        }
-      }
-
-
-    }
-    if(returnInt == 0)
-      printf("Sent information data successfully!\n");
-
-    return returnInt;
-
-
-
-  }
-
-   int receive_ua(){
-
-      int res; 
-      char buf[MAX_SIZE];
-      int count = 0;
-
-      strcpy(buf,"");
-      while (STOP_REC == FALSE) {
-        res = read(appLayer.fd,buf,1);
-        
-        if(res == 0)
-           return -1;
-
-        switch(count){
-              case 0:
-            if(buf[res-1] == FLAG)
-               count++;
+        case 1:
+          if(buf[res-1] == A_REC)
+            count++;
+          else if(buf[res-1] == FLAG)
             break;
-              case 1:
-            if(buf[res-1] == A_REC)
-               count++;
-                  else if(buf[res-1] == FLAG)
-                     break;
-            else count=0;
-                  break;
-              case 2:
-                  if(buf[res-1] == C_UA)
-                     count++;
-                  else if(buf[res-1] == FLAG)
-                     count=1;
-            else count=0;
-                  break;
-              case 3:
-            if(buf[res-1] == (C_UA^A_REC))
-                     count++;
-                  else if(buf[res-1] == FLAG)
-                     count=1;
-            else count=0;
-                  break;
-              case 4:
-            if(buf[res-1] == FLAG)
-                     return 0;
-            else count=0;
-                  break;
-        }
+          else count=0;
+          break;
+        case 2:
+          if(buf[res-1] == C_RRI)
+            count++;            
+          else if(buf[res-1] == FLAG)
+            count=1;
+          else count=0;
+          break;
+        case 3:
+          if(buf[res-1] == (C_RRI^A_REC))
+            count++;
+          else if(buf[res-1] == FLAG)
+            count=1;
+          else count=0;
+          break;
+        case 4:
+          if(buf[res-1] == FLAG)
+            return 0;
+          else count=0;
+          break;
       }
-         
-      return -1;
-    
+    }
+
 
   }
 
-  int send_set(){
+  else if(control == 1){
+    while (1) {
+       res = read(appLayer.fd,buf,1);
+       printf("%x\n",buf[res-1]);
+       if(res == 0)
+        return -1;
 
-    
-    unsigned char SET[5];
-    SET[0] = FLAG;
-    SET[1] = A_SEND;
-    SET[2] = C_SET;
-    SET[3] = SET[1]^SET[2];
-    SET[4] = FLAG;
+      switch(count){
+        case 0:
+         if(buf[res-1] == FLAG)
+          count++;
+          break;
+        case 1:
+          if(buf[res-1] == A_REC)
+            count++;
+          else if(buf[res-1] == FLAG)
+            break;
+          else count=0;
+          break;
+        case 2:
+          if(buf[res-1] == C_RRF)
+            count++;
+          if(buf[res-1] == C_REJ)
+            return 1;
+          else if(buf[res-1] == FLAG)
+            count=1;
+          else count=0;
+          break;
+        case 3:
+          if(buf[res-1] == (C_RRF^A_REC))
+            count++;
+          else if(buf[res-1] == FLAG)
+            count=1;
+          else count=0;
+          break;
+        case 4:
+          if(buf[res-1] == FLAG)
+            return 0;
+          else count=0;
+          break;
+      }
+    }
+
+
+  }
+
+  return -1;
+
+
+}
+
+
+
+int send_inf(int control){
+  printf("Sending %d bytes!\n",ll.sequenceNumber);
+  write(appLayer.fd,ll.frame,ll.sequenceNumber);
+  if(control == 0)
+    return receive_RR(0);
+  else
+    return receive_RR(1);
+
+}
+
+int prepare_inf(char* inf){     
+
+   byte_stuffing(inf);
+
+   int returnInt = -2;
+   printf("Waiting and then sending TI\n");
+   sleep(ll.timeout);
+   re_send=0;
+   while (re_send < ll.numTransmissions){
+    if(flag_al){
+     alarm(ll.timeout);
+     printf("SENDING DATA n%d!\n",(re_send+1));
+     flag_al=0;
+     if((returnInt=send_inf(0)) != 0){
+       printf("Error: no acknowledgment received from data sending (TI)!\n");
+     }
+     else break;
+
+   }
+  }
+  if(returnInt != 0 ){
+    printf("Error during data sending\n");
+
+  }
+  else{
+    printf("Waiting and then sending TF\n");
+    sleep(ll.timeout);
+    ll.frame[2] = C_SF;
+    ll.frame[3] = C_SF^A_SEND;
+    re_send = 0;
+    while (re_send < ll.numTransmissions){
+      if(flag_al){
+       alarm(ll.timeout);
+       printf("SENDING DATA n%d!\n",(re_send+1));
+       flag_al=0;
+       if((returnInt=send_inf(1)) != 0){
+         printf("Error: no acknowledgment received from data sending (TF)!\n");
+         if(returnInt == 1){
+          printf("Data received was not the same, trying again!\n");
+          return prepare_inf(inf);
+         }
+       }
+       else break;
+
+     }
+   }
+
+
+  }
+  if(returnInt == 0)
+    printf("Sent information data successfully!\n");
+
+  return returnInt;
+
+
+}
+
+int receive_ua(){
+
+  int res; 
+  char buf[MAX_SIZE];
+  int count = 0;
+
+  strcpy(buf,"");
+  while (STOP_REC == FALSE) {
+    res = read(appLayer.fd,buf,1);
+
+    if(res == 0)
+     return -1;
+
+   switch(count){
+      case 0:
+        if(buf[res-1] == FLAG)
+         count++;
+        break;
+      case 1:
+       if(buf[res-1] == A_REC)
+         count++;
+       else if(buf[res-1] == FLAG)
+         break;
+       else count=0;
+       break;
+      case 2:
+       if(buf[res-1] == C_UA)
+         count++;
+       else if(buf[res-1] == FLAG)
+         count=1;
+       else count=0;
+       break;
+      case 3:
+       if(buf[res-1] == (C_UA^A_REC))
+         count++;
+       else if(buf[res-1] == FLAG)
+         count=1;
+       else count=0;
+       break;
+      case 4:
+       if(buf[res-1] == FLAG)
+         return 0;
+       else count=0;
+       break;
+    }
+  }
+
+  return -1;
+
+
+}
+
+int send_set(){
+
+
+  unsigned char SET[5];
+  SET[0] = FLAG;
+  SET[1] = A_SEND;
+  SET[2] = C_SET;
+  SET[3] = SET[1]^SET[2];
+  SET[4] = FLAG;
 
     //SEND SET
-    write(appLayer.fd,SET,6);
-    printf("Sent SET\n");
+  write(appLayer.fd,SET,6);
+  printf("Sent SET\n");
 
     //RECEIVE UA
-     
-    return receive_ua();
-   
 
-  }
+  return receive_ua();
 
 
-  int prepare_set(){
-
-    int returnInt;
-    while (re_send < ll.numTransmissions){
-        if(flag_al){
-           alarm(ll.timeout);
-           printf("SENDING n%d!\n",(re_send+1));
-           flag_al=0;
-           if((returnInt=send_set()) != 0){
-             printf("Error: no acknowledgment received (UA)!\n");
-           }
-           else break;
-         
-      }
-    }
-    return returnInt;
-
-  }
+}
 
 
+int prepare_set(){
 
-  int saveConfig(){
+  int returnInt;
+  while (re_send < ll.numTransmissions){
+    if(flag_al){
+     alarm(ll.timeout);
+     printf("SENDING n%d!\n",(re_send+1));
+     flag_al=0;
+     if((returnInt=send_set()) != 0){
+       printf("Error: no acknowledgment received (UA)!\n");
+     }
+     else break;
 
-      (void) signal(SIGALRM, alarm_handler);
-      
-      appLayer.fd = open(ll.port, O_RDWR | O_NOCTTY );
+   }
+ }
+ return returnInt;
 
-      if (appLayer.fd <0) {perror(ll.port); exit(-1); }
+}
+
+
+
+int saveConfig(){
+
+  (void) signal(SIGALRM, alarm_handler);
+
+  appLayer.fd = open(ll.port, O_RDWR | O_NOCTTY );
+
+  if (appLayer.fd <0) {perror(ll.port); exit(-1); }
 
       if ( tcgetattr(appLayer.fd,&oldtio) == -1) { /* save current port settings */
-        perror("tcgetattr");
-        exit(-1);
-      }
-   
-      return 0;
-  }
+  perror("tcgetattr");
+  exit(-1);
+}
 
-  int newConfig(){
+return 0;
+}
 
-      struct termios newtio;
-	printf("New Config");
-      bzero(&newtio, sizeof(newtio));
-      newtio.c_cflag = ll.baudRate | CS8 | CLOCAL | CREAD;
-      newtio.c_iflag = IGNPAR;
-      newtio.c_oflag = 0;
+int newConfig(){
+
+  struct termios newtio;
+  printf("New Config");
+  bzero(&newtio, sizeof(newtio));
+  newtio.c_cflag = ll.baudRate | CS8 | CLOCAL | CREAD;
+  newtio.c_iflag = IGNPAR;
+  newtio.c_oflag = 0;
       /* set input mode (non-canonical, no echo,...) */
-      newtio.c_lflag = 0;
-      newtio.c_cc[VTIME]    = ll.timeout * 10;   /* inter-character timer unused */
-      newtio.c_cc[VMIN]     = 0;   /* blocking read until 5 chars received */
+  newtio.c_lflag = 0;
+  newtio.c_cc[VTIME] = ll.timeout * 10;   /* inter-character timer unused */
+  newtio.c_cc[VMIN] = 0;   /* blocking read until 5 chars received */
 
     /* 
       VTIME e VMIN devem ser alterados de forma a proteger com um temporizador a 
       leitura do(s) proximo(s) caracter(es)
     */
 
-      tcflush(appLayer.fd, TCIOFLUSH);
-      if ( tcsetattr(appLayer.fd,TCSANOW,&newtio) == -1) {
-        perror("tcsetattr");
-        exit(-1);
-      }
-
-      printf("New termios structure set\n");
-
-      return 0;
+ tcflush(appLayer.fd, TCIOFLUSH);
+ if ( tcsetattr(appLayer.fd,TCSANOW,&newtio) == -1) {
+    perror("tcsetattr");
+    exit(-1);
   }
 
+  printf("New termios structure set\n");
+  return 0;
+}
 
 
-  int closeConfig(){
 
-      printf("Ending program!\n");
-      sleep(5);
+int closeConfig(){
 
-      if ( tcsetattr(appLayer.fd,TCSANOW,&oldtio) == -1) {
-        perror("tcsetattr");
-        exit(-1);
-      }
+  printf("Ending program!\n");
+  sleep(5);
 
-      close(appLayer.fd);
-      return 0;
-
-
+  if ( tcsetattr(appLayer.fd,TCSANOW,&oldtio) == -1) {
+    perror("tcsetattr");
+    exit(-1);
   }
+
+  close(appLayer.fd);
+  return 0;
+
+
+}

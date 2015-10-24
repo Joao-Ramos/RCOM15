@@ -55,14 +55,43 @@ int llwrite(){
 		else break;
 		timeout++;
 	}
-
+	if(timeout == 3){
+		printf("llwrite: timed out cp1!\n");
+		return -1;
+	}
 	for(i = 0; i < fileData.numSeg; i++){
 		strcpy(str,"");
 		str = createDataPacket(i+1);
-		prepare_inf(str);
+		printf("llwrite: sending data segment %d!\n",i+1);
+		timeout=0;
+		while (timeout < ll.numTransmissions){
+			if(prepare_inf(str) != 0)
+				printf("llwrite: error sending cp1! Try number %d",timeout+1);
+			else break;
+			timeout++;
+		}
+		if(timeout == 3){
+			printf("llwrite: timed out cp1!\n");
+			return -1;
+		}
 	}
 
+	str = createCtrlPackets(1);
+	printf("llwrite: sending cp2!\n");
+	timeout=0;
+	while (timeout < ll.numTransmissions){
+		if(prepare_inf(str) != 0)
+			printf("llwrite: error sending cp2! Try number %d",timeout+1);
+		else break;
+		timeout++;
 
+	}
+	if(timeout == 3){
+		printf("llwrite: timed out cp2!\n");
+		return -1;
+	}
+
+	return 0;
 }
 
 int llread(){
@@ -103,12 +132,12 @@ int main (int argc, char ** argv){ //argv[1] = porta (0 a 5) argv[2] = flag (0 o
 	int port = 0;
 	int flag = 0;
 
-    char str[MAX_SIZE];
+	char str[MAX_SIZE];
 
 	if (argc < 4) {
-        printf("Usage:\t./app PortNumber flag filePath\n\tex: ./app 5 1\n");
-        exit(1);
-        }
+		printf("Usage:\t./app PortNumber flag filePath\n\tex: ./app 5 1\n");
+		exit(1);
+	}
 
 	port = atoi(argv[1]);
 	flag = atoi(argv[2]);
@@ -121,15 +150,15 @@ int main (int argc, char ** argv){ //argv[1] = porta (0 a 5) argv[2] = flag (0 o
 	printf("%d\n%d\n%s\n",port,flag,fp);
 	
 	if(port > 5 || port < 0){
-	
+		
 		printf("Port number must be between 0 and 5!\n");
-        	exit(1);
+		exit(1);
 
 	}
 	if(flag != 0 && flag != 1){
-	
+		
 		printf("Flag must be 0 or 1!\n");
-        	exit(1);
+		exit(1);
 
 	}
 
@@ -149,7 +178,7 @@ int main (int argc, char ** argv){ //argv[1] = porta (0 a 5) argv[2] = flag (0 o
 		}
 	}
 	else{
-	
+		
 		llread();
 
 	}
