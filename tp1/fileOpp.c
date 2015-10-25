@@ -1,20 +1,20 @@
 
 #include "interface.h"
 
-int readData(char* filepath){
+int readData(){
 
 
 	FILE *my_file;
 	unsigned int i;
 
-	my_file = fopen (filepath, "r");
+	my_file = fopen (ctrData.filePath, "r");
 	if (my_file == NULL)
 	{
 		printf ("File not found!\n");
 		printf ("Or filepath is wrong!\n");
 		return -1;
 	}
-	printf("Reading file and saving into a data struct\n");
+	printf("Reading file and saving into struct data\n");
 
 	fseek (my_file, 0, SEEK_END);
 	fileData.dataLength = ftell (my_file);
@@ -28,10 +28,11 @@ int readData(char* filepath){
 	else fileData.numSeg = fileData.dataLength/MAX_SIZE_DATA + 1;
 
 	printf("Num segments: %d\n", fileData.numSeg);
-	printf("Length of file: %d\n", fileData.dataLength);
+	printf("Length of file: %ld\n", fileData.dataLength);
 
-	for (i = 0; i < fileData.dataLength; i++)
+	for (i = 0; i < fileData.dataLength; i++){
 		fileData.data[i] = getc(my_file);
+	}
 
 	fclose (my_file);
 
@@ -39,82 +40,103 @@ int readData(char* filepath){
 
 }
 
-char* createCtrlPackets(int control){
+int createCtrlPackets(int control){
 
-	int size = 5 + ctrData.fpLength + 8;
 	int count = 0;
 	int i = 0;
 
-	char lengthValue[8];
-	char* str[size];
-	char fpLength;
+	unsigned char lengthValue[4];
+	lengthValue[0] = (int)((fileData.dataLength >> 24) & 0xFF) ;
+ 	lengthValue[1] = (int)((fileData.dataLength >> 16) & 0xFF) ;
+ 	lengthValue[2] = (int)((fileData.dataLength >> 8) & 0XFF);
+ 	lengthValue[3] = (int)((fileData.dataLength & 0XFF));
 
-	snprintf (lengthValue, 8, "%lX", ctrData.fileLength);
+	
 
-	printf("createCtrlPackets: lengthValue: %x\n",lengthValue);
-	printf("createCtrlPackets: fpLength: %x\n",fpLength);
-
-	if(control == 0) str[count] = C_START;
-	else str[count] = C_END;
+	if(control == 0) ctrData.frame[count] = C_START;
+	else ctrData.frame[count] = C_END;
 	count++;
 
-	str[count] = C_TAM_FILE;
+	ctrData.frame[count] = C_SIZE_FILE;
 	count++;
-	str[count] = SIZE;
+	ctrData.frame[count] = SIZE;
 	count++;
 
-	for(i = 0; i < 8; i++){
-		str[count] = lengthValue[i];
+	for(i = 0; i < 4; i++){
+		ctrData.frame[count] = lengthValue[i];
 		count++;
 	}
 
-	str[count] = C_LEN_FILE;
+	ctrData.frame[count] = C_NAME_FILE;
 	count++;
-	str[count] = (unsigned char) ctrlData.fpLength;
-
-	for(i = 0; i < strlen(ctrData.filePath); i++){
-		str[count] = crtData.filePath[i];
+	ctrData.frame[count] = (unsigned char) ctrData.fpLength;
+	count++;
+	
+	for(i = 0; i < ctrData.fpLength; i++){
+		ctrData.frame[count] = ctrData.filePath[i];
+		count++;
 	}
-
-	return str;
+	
+	ctrData.sequenceNumber = count;
+	return 0;
 }
 
-char* createDataPacket(int segment){
+int createDataPacket(int segment){
 
-	char seg;
 	int count = 0;
 	int i;
+	int size = 0;
 
 	if(segment == fileData.numSeg){
 
-		int size = fileData.dataLength % MAX_SIZE_DATA;
+		size = fileData.dataLength % MAX_SIZE_DATA;
 
 	}
-	else int size = MAX_SIZE_DATA;
+	else size = MAX_SIZE_DATA;
 	
-	char * str[size+4];
 	char L1 = (unsigned char) size,L2 = 0x00;
 
-	str[count] = C_DATA;
+	fileData.frame[count] = C_DATA;
 	count++;
 
 	
-	printf("createDataPackets: segment: %x\n",segment);
+	printf("createDataPackets: segment: %d\n",segment);
 
-	str[count] = (unsigned char) segment;
+	fileData.frame[count] = (unsigned char) segment;
 	count++;
 
-	str[count] = L2;
+	fileData.frame[count] = L2;
 	count++;
-	str[count] = L1;
+	fileData.frame[count] = L1;
 	count++;
 
 	for(i = 0; i < size ; i++){
-
-		str[count] = fileData[i+(segment-1) * MAX_SIZE_DATA];
+		
+		fileData.frame[count] = fileData.data[i+(segment-1) * MAX_SIZE_DATA];
 		count++;
 	}
-
-	return str;
+	fileData.sequenceNumber = count;
+	return 0;
 }
 
+int saveChunk(int segment){
+
+	FILE *my_file;
+
+	my_file = fopen (ctrData.filePath, "a");	
+        if(my_file == NULL){
+		printf("Creating and writing on new file with name: %s\n",ctrData.filePath);
+		my_file = fopen(ctrData.filePath,"w+");
+        }else printf("Updating file with name: %s\n",ctrData.filePath);
+	
+	
+	//fseek(my_file,MAX_SIZE_DATA*(segment-1), SEEK_SET);
+
+	fwrite(ll.frame, 1, ll.sequenceNumber,my_file);
+	
+	//fseek(my_file,0, SEEK_SET);
+
+	fclose(my_file);
+
+	return 0;
+}

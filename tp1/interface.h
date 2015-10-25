@@ -33,13 +33,13 @@
 
 #define C_START 0x01
 #define C_END 0x02
-#define C_TAM_FILE 0x00
-#define C_LEN_FILE 0x01
-#define SIZE 0x08
+#define C_SIZE_FILE 0x00
+#define C_NAME_FILE 0x01
+#define SIZE 0x04
 #define C_DATA 0x00
 
 #define MAX_SIZE 256
-#define MAX_SIZE_DATA 100
+#define MAX_SIZE_DATA 230
 
 struct termios oldtio;
 
@@ -58,35 +58,38 @@ struct linkLayer {
 	unsigned int timeout;	/*Valor do temporizador: 1 s*/
 	unsigned int numTransmissions;	/*Número de tentativas em caso de falha*/
 	char frame[MAX_SIZE*2];	/*Trama*/
-	char compFrame[MAX_SIZE*2] /*Trama para comparar*/ //TESTAR 
+	char compFrame[MAX_SIZE*2]; /*Trama para comparar*/ //TESTAR 
 
 };
 
 struct data{
 
 	unsigned long dataLength;
-	char * data; 
+	unsigned char * data; 
 	unsigned int numSeg;
+	char frame[MAX_SIZE*2];
+	unsigned int sequenceNumber;
 
 };
 
 struct controlData{
 
 	unsigned long fileLength;
-	char * filePath;
+	char filePath[MAX_SIZE_DATA];
 	unsigned int fpLength;
+	char frame[MAX_SIZE*2];
+	unsigned int sequenceNumber;
 };
 
 //writenoncanonical.c methods
-
 int send_final_ua();
 int receive_disc();
 int send_disc();
 int prepare_send_disc();
-int byte_stuffing(char* seq);
+int byte_stuffing(char* seq,int seqNum);
 int receive_RR(int control);
 int send_inf(int control);
-int prepare_inf(char* inf);
+int prepare_inf(char* inf, int seqNum);
 int send_set();
 int receive_ua();
 int prepare_set();
@@ -95,24 +98,28 @@ int newConfig();
 int closeConfig();
 
 //nc.c methods
+int checkFrames();
 int receive_ua_nc();
 int send_disc_nc();
-int send_rr(int equalize);
+int send_rr(int equalize, int segmentNumber);
 int send_ua();
+int checkControl(int equalize);
 int receive_inf(int control);
 int saveConfigNC();
 int newConfigNC();
 int closeConfigNC();
 
 //fileOpp.c methods
-int readData(char* filePath);
-char* createCtrlPackets(int control);
-char* createDataPacket(int segment, int size);
-int saveChunk();
+int readData();
+int createCtrlPackets(int control);
+int createDataPacket(int segment);
+int saveChunk(int segment);
 
 struct applicationLayer appLayer;
 struct linkLayer ll;
 struct data fileData;
 struct controlData ctrData;
+
+
 
 #endif

@@ -2,7 +2,7 @@
 
 
 
-int llopen(int port, int flag, char * file){
+int llopen(int port, int flag){
 
 	char sPort[20];
 
@@ -13,13 +13,15 @@ int llopen(int port, int flag, char * file){
 	strcpy(ll.port,sPort);
 
 
-	if(readData(file) != 0){
-		printf("llopen: file doesn't exist!\n");
-		return -1;
+	if(flag == 0){
+		if(readData() != 0){
+			printf("llopen: file doesn't exist!\n");
+			return -1;
+		}
+		printf("llopen: opening ports and sending SET bytes!\n");
 	}
-
-	printf("llopen: opening ports and sending SET bytes!\n");
-	printf("%s\n",ll.port);
+	else printf("llopen: opening ports!\n");
+	
 
 	if(appLayer.status == 0){
 		if(saveConfig(ll.port) != 0)
@@ -44,14 +46,14 @@ int llopen(int port, int flag, char * file){
 int llwrite(){
 
 	int i, timeout = 0;
-	char str[MAX_SIZE];
-	strcpy(str,"");
-
-	str = createCtrlPackets(0);
+	
 	printf("llwrite: sending cp1!\n");
 	while (timeout < ll.numTransmissions){
-		if(prepare_inf(str) != 0)
-			printf("llwrite: error sending cp1! Try number %d",timeout+1);
+		strcpy(ll.frame,"");
+		strcpy(ctrData.frame,"");
+		createCtrlPackets(0);
+		if(prepare_inf(ctrData.frame,ctrData.sequenceNumber) != 0)
+			printf("llwrite: error sending cp1! Try number %d\n",timeout+1);
 		else break;
 		timeout++;
 	}
@@ -59,29 +61,33 @@ int llwrite(){
 		printf("llwrite: timed out cp1!\n");
 		return -1;
 	}
-	for(i = 0; i < fileData.numSeg; i++){
-		strcpy(str,"");
-		str = createDataPacket(i+1);
-		printf("llwrite: sending data segment %d!\n",i+1);
+	for(i = 1; i <= fileData.numSeg; i++){
+		strcpy(ll.frame,"");
+		strcpy(fileData.frame,"");
+		createDataPacket(i);
+		printf("llwrite: sending data segment %d!\n",i);
 		timeout=0;
 		while (timeout < ll.numTransmissions){
-			if(prepare_inf(str) != 0)
-				printf("llwrite: error sending cp1! Try number %d",timeout+1);
+			if(prepare_inf(fileData.frame, fileData.sequenceNumber) != 0)
+				printf("llwrite: error sending cp1! Try number %d\n",timeout+1);
 			else break;
 			timeout++;
 		}
 		if(timeout == 3){
-			printf("llwrite: timed out cp1!\n");
+			printf("llwrite: timed out data sending!\n");
 			return -1;
 		}
 	}
-
-	str = createCtrlPackets(1);
+	
+	
 	printf("llwrite: sending cp2!\n");
 	timeout=0;
 	while (timeout < ll.numTransmissions){
-		if(prepare_inf(str) != 0)
-			printf("llwrite: error sending cp2! Try number %d",timeout+1);
+		strcpy(ctrData.frame,"");
+		strcpy(ll.frame,"");
+		createCtrlPackets(1);
+		if(prepare_inf(ctrData.frame, ctrData.sequenceNumber) != 0)
+			printf("llwrite: error sending cp2! Try number %d\n",timeout+1);
 		else break;
 		timeout++;
 
@@ -132,22 +138,13 @@ int main (int argc, char ** argv){ //argv[1] = porta (0 a 5) argv[2] = flag (0 o
 	int port = 0;
 	int flag = 0;
 
-	char str[MAX_SIZE];
-
-	if (argc < 4) {
-		printf("Usage:\t./app PortNumber flag filePath\n\tex: ./app 5 1\n");
+	if (argc < 3) {
+		printf("Usage:\t./app PortNumber flag\n\tex: ./app 5 1\n");
 		exit(1);
 	}
 
 	port = atoi(argv[1]);
 	flag = atoi(argv[2]);
-
-	int length = strlen(argv[3]);
-	char fp[length];
-
-	strcpy(fp,argv[3]);
-
-	printf("%d\n%d\n%s\n",port,flag,fp);
 	
 	if(port > 5 || port < 0){
 		
@@ -161,17 +158,21 @@ int main (int argc, char ** argv){ //argv[1] = porta (0 a 5) argv[2] = flag (0 o
 		exit(1);
 
 	}
+	if(flag==0){
+		printf("Write the name of the file you want to copy: ");
+		strcpy(ctrData.filePath,"");
+		gets(ctrData.filePath);
+		ctrData.fpLength = strlen(ctrData.filePath);
+	}
 
-	
-
-	if(llopen(port, flag, fp) == -1){	
+	if(llopen(port, flag) == -1){	
 		printf("Error llopen!\n");
 		exit(1);
 
 	}
 
 	if(appLayer.status == 0){
-
+		
 		if(llwrite() == -1){
 			printf("Error llwrite!\n");
 			exit(1);

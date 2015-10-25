@@ -5,7 +5,7 @@
 
 volatile int STOP_REC=FALSE;
 
-int re_send = 0,, re_send_ti = 0, re_send_tf = 0, flag_al = 1;
+int re_send = 0, re_send_ti = 0, re_send_tf = 0, flag_al = 1;
 
 void alarm_handler(){
 
@@ -42,9 +42,10 @@ int prepare_send_final_ua(){
       printf("SENDING DATA n%d!\n",(re_send+1));
       flag_al=0;
       send_final_ua();
-      else break;
+      
 
     }
+    else break;
   }
 
   return closeConfig();
@@ -55,10 +56,9 @@ int receive_disc(){
   char buf[1];
   int res;
   int count = 0;
-  printf("Waiting for final disc!\n");
+  printf("Receiving DISC...\n");
 
 
-  if(control == 0) {
     while (1) {
       res = read(appLayer.fd,buf,1);
 
@@ -103,7 +103,7 @@ int receive_disc(){
 
       }
     }
-  }
+  
 
   return -1;
 }
@@ -144,7 +144,7 @@ int prepare_send_disc(){
 
 }
 
-int byte_stuffing(char* seq){
+int byte_stuffing(char* seq, int seqNum){
 
   int count1 = 0;
   int count2 = 4;
@@ -156,8 +156,7 @@ int byte_stuffing(char* seq){
   ll.frame[2] = C_SI;
   ll.frame[3] = ll.frame[1]^ll.frame[2];
 
-  while (count1 < strlen(seq)) {
-   printf("%x\n",seq[count1]);
+  while (count1 < seqNum) {
    if(seq[count1] == FLAG){
      ll.frame[count2] = ESC;
      count2++;
@@ -195,11 +194,10 @@ int receive_RR(int control){
 	int res;
 	int count = 0;
 
-	if(control == 0) {
-		while (1) {
-			res = read(appLayer.fd,buf,1);
-
-			if(res == 0)
+if(control == 0) {
+  while (1) {
+	res = read(appLayer.fd,buf,1);
+	if(res == 0)
         return -1;
 
       switch(count){
@@ -242,8 +240,8 @@ int receive_RR(int control){
 
   else if(control == 1){
     while (1) {
+	
        res = read(appLayer.fd,buf,1);
-       printf("%x\n",buf[res-1]);
        if(res == 0)
         return -1;
 
@@ -262,8 +260,8 @@ int receive_RR(int control){
         case 2:
           if(buf[res-1] == C_RRF)
             count++;
-          if(buf[res-1] == C_REJ)
-            return 1;
+         /* if(buf[res-1] == C_REJ)
+            return 1;*/
           else if(buf[res-1] == FLAG)
             count=1;
           else count=0;
@@ -296,16 +294,14 @@ int receive_RR(int control){
 int send_inf(int control){
   printf("Sending %d bytes!\n",ll.sequenceNumber);
   write(appLayer.fd,ll.frame,ll.sequenceNumber);
-  if(control == 0)
-    return receive_RR(0);
-  else
-    return receive_RR(1);
+  return receive_RR(control);
 
 }
 
-int prepare_inf(char* inf){     
-
-   byte_stuffing(inf);
+int prepare_inf(char* inf, int seqNum){     
+	
+  
+   byte_stuffing(inf, seqNum);
 
    int returnInt = -2;
    printf("Waiting and then sending TI\n");
@@ -342,7 +338,7 @@ int prepare_inf(char* inf){
          printf("Error: no acknowledgment received from data sending (TF)!\n");
          if(returnInt == 1){
           printf("Data received was not the same, trying again!\n");
-          return prepare_inf(inf);
+          return prepare_inf(inf,seqNum);
          }
        }
        else break;
@@ -474,7 +470,6 @@ return 0;
 int newConfig(){
 
   struct termios newtio;
-  printf("New Config");
   bzero(&newtio, sizeof(newtio));
   newtio.c_cflag = ll.baudRate | CS8 | CLOCAL | CREAD;
   newtio.c_iflag = IGNPAR;

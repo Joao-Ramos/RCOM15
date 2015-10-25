@@ -4,7 +4,18 @@
 
 int set = 0;
 volatile int STOP=FALSE;
+unsigned int segmentNumber;
 
+int checkFrames(){
+
+  int i;
+
+  for(i = 0; i < ll.sequenceNumber; i++)
+      if(ll.compFrame[i] != ll.frame[i])
+          return -1;
+
+  return 0;
+}
 
 int receive_ua_nc(){
 
@@ -75,11 +86,11 @@ int send_disc_nc(){
 }
 
 
-int send_rr(int equalize){
+
+int send_rr(int equalize, int segmentNumber){
 
   int i = 0;
   char RR[5];
-  int dif = 0;
 
   RR[0] = FLAG;
   RR[1] = A_REC;
@@ -90,24 +101,22 @@ int send_rr(int equalize){
     for(i = 0; i < ll.sequenceNumber; i++)
       ll.compFrame[i] = ll.frame[i];
   }
-  else{
-    for(i = 0; i < ll.sequenceNumber; i++)
-      if(ll.compFrame[i] != ll.frame[i])
-        dif = 1;
+  else if (equalize == 1){
 
-    if(!dif){
-      save_chunk();
+   // if(checkFrames() == 0){
+      if(segmentNumber > 0)
+      	saveChunk(segmentNumber);
       RR[2] = C_RRF;
-    }
-    else{
-      RR[2] = C_REJ;
-    }
+   // }
+    //else{
+   //   RR[2] = C_REJ;
+   // }
   }
 
   RR[3] = RR[1]^RR[2];
   RR[4] = FLAG;
 
-  printf("send_rr: Sending rr number %d\n", control);
+  printf("send_rr: Sending rr number %d\n", equalize);
   write(appLayer.fd,RR, 6);
 
   return 0;
@@ -130,6 +139,68 @@ int send_ua() {
     return 0;
 }
 
+int checkControl(int equalize){ //change this function
+
+  int i;
+  unsigned int size;
+  int segmentNumber = 0;
+  char buf[MAX_SIZE*2];
+
+  if(ll.frame[0] == C_START){
+    if(ll.frame[1] == C_SIZE_FILE){
+      size = (unsigned int) ll.frame[2];
+      char flength[size];
+      for(i = 3; i < (3+size); i++){
+        flength[i] = ll.frame[i];
+      }
+
+      ctrData.fileLength = ( (flength[0] << 24) 
+                   + (flength[1] << 16) 
+                   + (flength[2] << 8) 
+                   + (flength[3] ) );
+      i = 3+size;
+      if(ll.frame[i] == C_NAME_FILE){
+        i++;
+        size = (unsigned int) ll.frame[i];
+	i++;
+        int curi = i;
+        for(; i < (curi+size); i++){
+          ctrData.filePath[i-curi] = ll.frame[i];
+        }
+        ctrData.fpLength = i-curi+1;
+      }
+    }
+    return send_rr(equalize,0);
+  }
+  else if (ll.frame[0] == C_END){
+    return send_rr(equalize,0);
+  }
+  else if(ll.frame[0] == C_DATA){
+
+    segmentNumber = (unsigned int) ll.frame[1];
+    int L2 = (unsigned int) ll.frame[2]; 
+    int L1 = (unsigned int) ll.frame[3];
+
+    int size1 = 256*L2+L1;
+
+    for(i=0; i < size1; i++){
+	buf[i] = ll.frame[i+4]; 
+
+    }
+
+    for(i=0; i < size1; i++){
+	ll.frame[i] = buf[i];
+
+    }
+
+    ll.sequenceNumber -= 4;
+  
+    return send_rr(equalize,segmentNumber);
+  }
+
+  return -1;
+}
+
 int receive_inf(int control){
 
   int state = 0;
@@ -145,7 +216,6 @@ int receive_inf(int control){
   while(STOP == FALSE) {
 	res = read(appLayer.fd,buf,1);
 
-  	printf("%x\n", buf[res-1]);
   	switch(state){
   	case 0:
 	    if(buf[res-1] == FLAG)
@@ -160,7 +230,9 @@ int receive_inf(int control){
       else if(buf[res-1] == FLAG) 
         break; 
       else state=0; 
-      strcpy(ll.frame, "");
+      strcpy(ll.frame,"");
+      count_buf = 0;
+      ll.sequenceNumber = 0;
         break; 
         
     case 2:
@@ -211,7 +283,9 @@ int receive_inf(int control){
       break;
       
     case 6:
-      if(buf[res-1] == AFT_FLAG){
+      if(buf[res-1] == FLAG) 
+        state = 1;
+      else if(buf[res-1] == AFT_FLAG){
 	if(ant[0] == ESC){
         	ll.frame[count_buf] = FLAG;
         	count_buf++;
@@ -245,11 +319,11 @@ int receive_inf(int control){
     case 7:
       if(buf[res-1] == FLAG){
         printf("Successfully destuffed bytes and saved message in ll.frame!\n");
-	      ant[0]='\0';
-	      state = 0;
-	      ll.sequenceNumber = count_buf;
-        send_rr(equalize);
-	      if(control == 0)control++;
+	ant[0]='\0';
+	state = 0;
+	ll.sequenceNumber = count_buf;
+        checkControl(equalize);
+	if(control == 0)control++;
       }
       else{
         ll.frame[count_buf] = ant[0]; 
@@ -271,7 +345,7 @@ int receive_inf(int control){
     case 9:
       if(buf[res-1] == FLAG){
         printf("Sending DISC and shutting down!\n");
-        return send_disc();
+        return send_disc_nc();
 
       }
       else state = 0;
