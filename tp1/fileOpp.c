@@ -1,5 +1,7 @@
+#include "fileOpp.h"
 
-#include "interface.h"
+#define MAX_SIZE 256
+#define MAX_SIZE_DATA 230
 
 int readData(){
 
@@ -28,7 +30,7 @@ int readData(){
 	else fileData.numSeg = fileData.dataLength/MAX_SIZE_DATA + 1;
 
 	printf("Num segments: %d\n", fileData.numSeg);
-	printf("Length of file: %ld\n", fileData.dataLength);
+	printf("Length of file: %ld bytes\n", fileData.dataLength);
 
 	for (i = 0; i < fileData.dataLength; i++){
 		fileData.data[i] = getc(my_file);
@@ -85,7 +87,7 @@ int createDataPacket(int segment){
 
 	int count = 0;
 	int i;
-	int size = 0;
+	unsigned int size = 0;
 
 	if(segment == fileData.numSeg){
 
@@ -93,9 +95,9 @@ int createDataPacket(int segment){
 
 	}
 	else size = MAX_SIZE_DATA;
-	
-	char L1 = (unsigned char) size,L2 = 0x00;
 
+	unsigned char L1 = (short) size%256,L2 = (short) size/256;
+	
 	fileData.frame[count] = C_DATA;
 	count++;
 
@@ -107,11 +109,14 @@ int createDataPacket(int segment){
 
 	fileData.frame[count] = L2;
 	count++;
-	fileData.frame[count] = L1;
+	fileData.frame[count] = '\0';
+	fileData.frame[count] = (char) L1;
 	count++;
+	printf("L1: %x\n",L1);
+	printf("L1: %x\n",fileData.frame[count-1]);
 
 	for(i = 0; i < size ; i++){
-		
+	
 		fileData.frame[count] = fileData.data[i+(segment-1) * MAX_SIZE_DATA];
 		count++;
 	}
@@ -119,20 +124,25 @@ int createDataPacket(int segment){
 	return 0;
 }
 
-int saveChunk(int segment){
+int saveChunk(char* buf, int sequenceNumber){
 
 	FILE *my_file;
+	unsigned int i;
 
 	my_file = fopen (ctrData.filePath, "a");	
         if(my_file == NULL){
 		printf("Creating and writing on new file with name: %s\n",ctrData.filePath);
 		my_file = fopen(ctrData.filePath,"w+");
-        }else printf("Updating file with name: %s\n",ctrData.filePath);
+        }else printf("Updating file with name: %s\n\n",ctrData.filePath);
 	
 	
 	//fseek(my_file,MAX_SIZE_DATA*(segment-1), SEEK_SET);
 
-	fwrite(ll.frame, 1, ll.sequenceNumber,my_file);
+	for(i = 0; i< sequenceNumber; i++){
+		putc(buf[i],my_file);
+	}
+
+	//fwrite(buf, 1, ll.sequenceNumber,my_file);
 	
 	//fseek(my_file,0, SEEK_SET);
 

@@ -1,7 +1,7 @@
   /*Non-Canonical Input Processing*/
 
   #include "interface.h" 
-
+  #include "transmitter.h"
 
 volatile int STOP_REC=FALSE;
 
@@ -157,6 +157,7 @@ int byte_stuffing(char* seq, int seqNum){
   ll.frame[3] = ll.frame[1]^ll.frame[2];
 
   while (count1 < seqNum) {
+   
    if(seq[count1] == FLAG){
      ll.frame[count2] = ESC;
      count2++;
@@ -169,10 +170,11 @@ int byte_stuffing(char* seq, int seqNum){
      ll.frame[count2] = 0x5d;
      count2++;
    }
+  
    else{
      ll.frame[count2] = seq[count1];
      count2++;
-   }
+   }  
    count1++;
  }
 
@@ -328,6 +330,7 @@ int prepare_inf(char* inf, int seqNum){
     sleep(ll.timeout);
     ll.frame[2] = C_SF;
     ll.frame[3] = C_SF^A_SEND;
+    ll.frame[ll.sequenceNumber-2] = ll.frame[3];
     re_send = 0;
     while (re_send < ll.numTransmissions){
       if(flag_al){
@@ -349,7 +352,7 @@ int prepare_inf(char* inf, int seqNum){
 
   }
   if(returnInt == 0)
-    printf("Sent information data successfully!\n");
+    printf("Sent information data successfully!\n\n");
 
   return returnInt;
 
@@ -464,7 +467,7 @@ int saveConfig(){
   exit(-1);
 }
 
-return 0;
+return newConfig();
 }
 
 int newConfig(){
@@ -491,7 +494,7 @@ int newConfig(){
   }
 
   printf("New termios structure set\n");
-  return 0;
+  return prepare_set();
 }
 
 

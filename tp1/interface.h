@@ -12,10 +12,10 @@
 #include <unistd.h>
 
 
-#define _POSIX_SOURCE 1 /* POSIX compliant source */
+#define _POSIX_SOURCE 1 // POSIX compliant source 
 #define FALSE 0
 #define TRUE 1
-
+/*
 #define FLAG 0x7e
 #define ESC 0x7d
 #define AFT_ESC 0x5d 
@@ -37,11 +37,12 @@
 #define C_NAME_FILE 0x01
 #define SIZE 0x04
 #define C_DATA 0x00
+*/
 
 #define MAX_SIZE 256
 #define MAX_SIZE_DATA 230
 
-struct termios oldtio;
+
 
 struct applicationLayer {
 
@@ -81,6 +82,7 @@ struct controlData{
 	unsigned int sequenceNumber;
 };
 
+/*
 //writenoncanonical.c methods
 int send_final_ua();
 int receive_disc();
@@ -90,6 +92,7 @@ int byte_stuffing(char* seq,int seqNum);
 int receive_RR(int control);
 int send_inf(int control);
 int prepare_inf(char* inf, int seqNum);
+int create_packets_send();
 int send_set();
 int receive_ua();
 int prepare_set();
@@ -98,10 +101,10 @@ int newConfig();
 int closeConfig();
 
 //nc.c methods
-int checkFrames();
+int checkFrames(char* buf);
 int receive_ua_nc();
 int send_disc_nc();
-int send_rr(int equalize, int segmentNumber);
+int send_rr(int equalize, int segmentNumber, char * buf);
 int send_ua();
 int checkControl(int equalize);
 int receive_inf(int control);
@@ -113,12 +116,19 @@ int closeConfigNC();
 int readData();
 int createCtrlPackets(int control);
 int createDataPacket(int segment);
-int saveChunk(int segment);
+int saveChunk(char* buf, int segment); */
+
+int checkFrames(char*buf);
+
+int llopen();
+int llread();
+int llwrite(int control, char * buf, int seqNum);
+int llclose();
 
 struct applicationLayer appLayer;
 struct linkLayer ll;
-struct data fileData;
-struct controlData ctrData;
+//struct data fileData;
+//struct controlData ctrData;
 
 
 
