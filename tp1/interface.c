@@ -1,37 +1,35 @@
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <unistd.h>
+
 #include "transmitter.h"
 #include "receiver.h"
 #include "interface.h"
 
+int setNum = 0;
+
 int llopen(){
 
 	if(appLayer.status == 0){
-		if(readData() != 0){
-			printf("llopen: file doesn't exist!\n");
-			return -1;
-		}
+		
 		printf("llopen: opening ports and sending SET bytes!\n");
+		return saveConfig();
 	}
-	else printf("llopen: opening ports!\n");
-	
 
-	if(appLayer.status == 0){
-		if(saveConfig() != 0)
-			return -1;
-		return 0;
-		
-	}
-	else {
-		if(saveConfigNC() != 0)
-			return -1;
-		return 0;
-		
-	}
+	printf("llopen: opening ports!\n");
+	return saveConfigNC();
 
 }
 
-int llread(){
+int llread(int control){
 
-	int state = 0;
+  int state = 0;
   int equalize = 0;
   int res = 0;
   int count_buf = 0;
@@ -41,7 +39,7 @@ int llread(){
   //RECEIVE INF
   strcpy(buf,"");
     
-  while(STOP == FALSE) {
+  while(TRUE) {
 	res = read(appLayer.fd,buf,1);
 
   	switch(state){
@@ -67,10 +65,10 @@ int llread(){
     case 2:
       if(buf[res-1] == C_SET) 
         state++; 
-      else if(buf[res-1] == C_SI && set == 1){
+      else if(buf[res-1] == C_SI && setNum == 1){
         state = 5;
       } 
-      else if(buf[res-1] == C_SF && control == 1 && set == 1){
+      else if(buf[res-1] == C_SF && control == 1 && setNum == 1){
         state=5;
       }
       else if (buf[res-1] == C_DISC)
@@ -92,6 +90,7 @@ int llread(){
       if (buf[res-1] == FLAG) {
         printf("Received SET!\n");
         state = 0;
+	  setNum = 1;
         return send_ua();
       }
       else state = 0;
@@ -115,28 +114,28 @@ int llread(){
       if(buf[res-1] == FLAG) 
         state = 1;
       else if(buf[res-1] == AFT_FLAG){
-	if(ant[0] == ESC){
+	   if(ant[0] == ESC){
         	ll.frame[count_buf] = FLAG;
         	count_buf++;
 		ant[0] = '\0';
-	}
-	else {
+	   }
+	   else {
 		ll.frame[count_buf] = AFT_FLAG;
 		count_buf++;
 		ant[0] = AFT_FLAG;
-	}
+	   }
       }
       else if(buf[res-1] == AFT_ESC){
-	if(ant[0] == ESC){
+	   if(ant[0] == ESC){
         	ll.frame[count_buf] = ESC;
         	count_buf++;
 		ant[0] = '\0';
-	}
-	else {
+	   }
+	   else {
 		ll.frame[count_buf] = AFT_ESC;
 		count_buf++;
 		ant[0] = AFT_ESC;
-	}
+	   }
       }
       else if(buf[res-1] == ESC) {
 		ant[0] = ESC;
@@ -152,11 +151,10 @@ int llread(){
     case 7:
       if(buf[res-1] == FLAG){
         printf("Successfully destuffed bytes and saved message! %d bytes\n", count_buf);
-	ant[0]='\0';
-	state = 0;
-	ll.sequenceNumber = count_buf;
-    return equalize+1; //checkControl(equalize);
-	if(control == 0)control++;
+	  ant[0]='\0';
+	  state = 0;
+	  ll.sequenceNumber = count_buf;
+    	  return equalize+1;
       }
       else{
         ll.frame[count_buf] = ant[0]; 
@@ -219,6 +217,8 @@ int llclose(){
 	if(appLayer.status == 0){
 		return prepare_send_disc();
 	}
-	
+	send_disc_nc();
+	closeConfigNC();
+
 	return 0;
 }

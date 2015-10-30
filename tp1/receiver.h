@@ -17,6 +17,7 @@
 #define C_REJ 0x25
 #define C_DISC 0x0b
 
+
 struct termios oldtio;
 
 int receive_ua_nc();
@@ -27,8 +28,5 @@ int receive_inf(int control);
 int saveConfigNC();
 int newConfigNC();
 int closeConfigNC();
-
-
-int set = 0;
 
 #endif

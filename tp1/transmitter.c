@@ -1,7 +1,17 @@
-  /*Non-Canonical Input Processing*/
+/*Non-Canonical Input Processing*/
 
-  #include "interface.h" 
-  #include "transmitter.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <unistd.h>
+
+#include "interface.h" 
+#include "transmitter.h"
 
 volatile int STOP_REC=FALSE;
 
@@ -33,13 +43,13 @@ int send_final_ua(){
 
 int prepare_send_final_ua(){
 
-  printf("Waiting and then sending DISC\n");
+  printf("\nWaiting and then sending FINAL UA\n");
   sleep(3);
   re_send = 0;
   while (re_send < ll.numTransmissions){
     if(flag_al){
       alarm(ll.timeout);
-      printf("SENDING DATA n%d!\n",(re_send+1));
+      printf("SENDING UA n%d!\n",(re_send+1));
       flag_al=0;
       send_final_ua();
       
@@ -57,7 +67,7 @@ int receive_disc(){
   int res;
   int count = 0;
   printf("Receiving DISC...\n");
-
+	
 
     while (1) {
       res = read(appLayer.fd,buf,1);
@@ -130,7 +140,7 @@ int prepare_send_disc(){
   while (re_send < ll.numTransmissions){
     if(flag_al){
       alarm(ll.timeout);
-      printf("SENDING DATA n%d!\n",(re_send+1));
+      printf("SENDING DISC n%d!\n",(re_send+1));
       flag_al=0;
       if((returnInt=send_disc()) != 0){
         printf("Error: no acknowledgment received from data sending (DISC)!\n");
@@ -457,8 +467,7 @@ int prepare_set(){
 int saveConfig(){
 
   (void) signal(SIGALRM, alarm_handler);
-
-  appLayer.fd = open(ll.port, O_RDWR | O_NOCTTY );
+   appLayer.fd = open(ll.port, O_RDWR | O_NOCTTY );
 
   if (appLayer.fd <0) {perror(ll.port); exit(-1); }
 

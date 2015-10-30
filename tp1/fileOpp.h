@@ -1,15 +1,15 @@
 #ifndef FILEOPP_H
 #define FILEOPP_H
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <termios.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <signal.h>
-#include <unistd.h>
+#define C_START 0x01
+#define C_END 0x02
+#define C_SIZE_FILE 0x00
+#define C_NAME_FILE 0x01
+#define SIZE 0x04
+#define C_DATA 0x00
+
+#define MAX_SIZE 256
+#define MAX_SIZE_DATA 230
 
 
 struct data{

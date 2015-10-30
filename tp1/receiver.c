@@ -1,11 +1,19 @@
 /*Non-Canonical Input Processing*/
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <unistd.h>
+
 #include "interface.h"
 #include "receiver.h"
 
-//int set = 0;
-volatile int STOP=FALSE;
-unsigned int segmentNumber;
 
+unsigned int segmentNumber;
 
 
 int receive_ua_nc(){
@@ -48,7 +56,6 @@ int receive_ua_nc(){
               case 4:
             if(buf[res-1] == FLAG){
               printf("Received UA and closing down!\n");
-	            set = 0;
               return 0;
 	    }
             else count=0;
@@ -70,7 +77,7 @@ int send_disc_nc(){
   DISC[2] = C_DISC;
   DISC[3] = DISC[1]^DISC[2];
   DISC[4] = FLAG;
-  write(appLayer.fd,DISC, 6);
+  write(appLayer.fd,DISC,6);
 
   receive_ua_nc();
   return 1;
@@ -80,7 +87,6 @@ int send_disc_nc(){
 
 int send_rr(int equalize, char* buf){
 
-  int i = 0;
   char RR[5];
 
   RR[0] = FLAG;
@@ -118,7 +124,6 @@ int send_ua() {
     UA[4] = FLAG;
 
     //SEND UA
-    set = 1;
     write(appLayer.fd,UA,5);
     printf("Sent response (UA)!\n\n");
 
@@ -145,8 +150,9 @@ int saveConfigNC()
     because we don't want to get killed if linenoise sends CTRL-C.
     */
   
-    
+
     appLayer.fd = open(ll.port, O_RDWR | O_NOCTTY );
+
     if (appLayer.fd <0) {perror(ll.port); exit(-1); }
 
     if ( tcgetattr(appLayer.fd,&oldtio) == -1) { /* save current port settings */

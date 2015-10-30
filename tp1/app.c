@@ -1,3 +1,13 @@
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <unistd.h>
+
 #include "app.h"
 #include "interface.h"
 #include "fileOpp.h"
@@ -57,7 +67,7 @@ int create_packets_send(){
 		strcpy(ctrData.frame,"");
 		strcpy(ll.frame,"");
 		createCtrlPackets(1);
-		if(prepare_inf(2,ctrData.frame, ctrData.sequenceNumber) != 0)
+		if(llwrite(2, ctrData.frame, ctrData.sequenceNumber) != 0)
 			printf("llwrite: error sending cp2! Try number %d\n",timeout+1);
 		else break;
 		timeout++;
@@ -72,7 +82,7 @@ int create_packets_send(){
 
 }
 
-int send_rr(int equalize, int segmentNumber, char* buf){
+int send_rr_app(int equalize, int segmentNumber, char* buf){
 
   int i = 0;
 
@@ -85,7 +95,7 @@ int send_rr(int equalize, int segmentNumber, char* buf){
 
     if(checkFrames(buf) == 0){
       if(segmentNumber > 0)
-      	saveChunk(buf,segmentNumber);
+      	saveChunk(buf,ll.sequenceNumber);
     }
      return llwrite(equalize,buf,0);
   }
@@ -93,7 +103,7 @@ int send_rr(int equalize, int segmentNumber, char* buf){
   return -1;
 }
 
-int checkControl(int equalize){ //change this function
+int checkControl(int equalize){
 
   int i;
   unsigned int size;
@@ -124,45 +134,33 @@ int checkControl(int equalize){ //change this function
         ctrData.fpLength = i-curi+1;
       }
     }
-    return send_rr(equalize,0,"");
+    return send_rr_app(equalize,0,"");
   }
   else if (ll.frame[0] == C_END){
-    return send_rr(equalize,0,"");
+    return send_rr_app(equalize,0,"");
   }
   else if(ll.frame[0] == C_DATA){
 
     segmentNumber = ll.frame[1];
-    short L2 = (short) ll.frame[2]; 
-    short L1 = (short) ll.frame[3];
-
-    int size1 = 256*L2+L1;
-	
-
+    	
     ll.sequenceNumber = ll.sequenceNumber - 4;
 
     for(i=0; i < ll.sequenceNumber; i++){
 	buf[i] = ll.frame[i+4]; 
     }
-    /*
-    for(i=0; i < ll.sequenceNumber; i++){
-	ll.frame[i] = buf[i];
-
-    }*/
-
-    
-  
-    return send_rr(equalize,segmentNumber,buf);
+     
+    return send_rr_app(equalize,segmentNumber,buf);
   }
 
   return -1;
 }
 
 
-int main (int argc, char ** argv){ //argv[1] = porta (0 a 5) argv[2] = flag (0 ou 1)
+int main (int argc, char ** argv){ 
 
 	
 	ll.baudRate = 9600;
-	ll.timeout = 2;
+	ll.timeout = 1;
 	ll.numTransmissions = 3;
 
 
@@ -205,6 +203,11 @@ int main (int argc, char ** argv){ //argv[1] = porta (0 a 5) argv[2] = flag (0 o
 	appLayer.status = flag;
 	strcpy(ll.port,sPort);
 
+	if(flag == 0)
+		if(readData() != 0){
+			printf("\nError: File doesn't exist!\n\n");
+			return -1;
+		}
 	if(llopen() == -1){	
 		printf("Error llopen!\n");
 		exit(1);
@@ -219,13 +222,14 @@ int main (int argc, char ** argv){ //argv[1] = porta (0 a 5) argv[2] = flag (0 o
 		}
 	}
 	else{
-
+		int control = 0;
 		while(TRUE){
-
-			read_ret = llread();
+			
+			read_ret = llread(control);
 
 			if (read_ret == 1){
 				checkControl(read_ret-1);
+				control = 1;
 			}
 			else if(read_ret == 2){
 				checkControl(read_ret-1);

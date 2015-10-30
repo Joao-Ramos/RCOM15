@@ -1,10 +1,15 @@
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <unistd.h>
 #include "fileOpp.h"
 
-#define MAX_SIZE 256
-#define MAX_SIZE_DATA 230
-
 int readData(){
-
 
 	FILE *my_file;
 	unsigned int i;
@@ -112,8 +117,6 @@ int createDataPacket(int segment){
 	fileData.frame[count] = '\0';
 	fileData.frame[count] = (char) L1;
 	count++;
-	printf("L1: %x\n",L1);
-	printf("L1: %x\n",fileData.frame[count-1]);
 
 	for(i = 0; i < size ; i++){
 	
@@ -133,18 +136,14 @@ int saveChunk(char* buf, int sequenceNumber){
         if(my_file == NULL){
 		printf("Creating and writing on new file with name: %s\n",ctrData.filePath);
 		my_file = fopen(ctrData.filePath,"w+");
-        }else printf("Updating file with name: %s\n\n",ctrData.filePath);
+        }else printf("Updating file with name: %s\n",ctrData.filePath);
 	
 	
-	//fseek(my_file,MAX_SIZE_DATA*(segment-1), SEEK_SET);
-
 	for(i = 0; i< sequenceNumber; i++){
 		putc(buf[i],my_file);
 	}
 
-	//fwrite(buf, 1, ll.sequenceNumber,my_file);
 	
-	//fseek(my_file,0, SEEK_SET);
 
 	fclose(my_file);
 
