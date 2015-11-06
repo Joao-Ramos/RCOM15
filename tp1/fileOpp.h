@@ -29,6 +29,7 @@ struct controlData{
 	unsigned int fpLength;
 	char frame[MAX_SIZE*2];
 	unsigned int sequenceNumber;
+	
 };
 
 int readData();

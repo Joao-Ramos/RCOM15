@@ -12,106 +12,104 @@
 #include "interface.h"
 #include "receiver.h"
 
-
 unsigned int segmentNumber;
 
+int receive_ua_nc() {
+    int res; 
+    char buf[MAX_SIZE];
+    int count = 0;
 
-int receive_ua_nc(){
-
-      int res; 
-      char buf[MAX_SIZE];
-      int count = 0;
-
-      strcpy(buf,"");
-     
-      while (1) {
+    strcpy(buf,"");
+    
+    while (1) {
         res = read(appLayer.fd,buf,1);
 
-        switch(count){
-              case 0:
+        switch(count) {
+            case 0:
             if(buf[res-1] == FLAG)
                count++;
             break;
-              case 1:
+            
+            case 1:
             if(buf[res-1] == A_SEND)
                count++;
-                  else if(buf[res-1] == FLAG)
-                     break;
-            else count=0;
-                  break;
-              case 2:
-                  if(buf[res-1] == C_UA)
-                     count++;
-                  else if(buf[res-1] == FLAG)
-                     count=1;
-            else count=0;
-                  break;
-              case 3:
+            else if(buf[res-1] == FLAG)
+                break;
+            else
+                count=0;
+            break;
+            
+            case 2:
+            if(buf[res-1] == C_UA)
+                count++;
+            else if(buf[res-1] == FLAG)
+                count=1;
+            else
+                count=0;
+            break;
+            
+            case 3:
             if(buf[res-1] == (C_UA^A_SEND))
-                     count++;
-                  else if(buf[res-1] == FLAG)
-                     count=1;
-            else count=0;
-                  break;
-              case 4:
-            if(buf[res-1] == FLAG){
-              printf("Received UA and closing down!\n");
-              return 0;
-	    }
-            else count=0;
-                  break;
+                count++;
+            else if(buf[res-1] == FLAG)
+                count=1;
+            else
+                count=0;
+            break;
+            
+            case 4:
+            if(buf[res-1] == FLAG) {
+                printf("Received UA and closing down!\n");
+                return 0;
+            }
+            else
+                count=0;
+            break;
         }
-      }
-         
-      return -1;
+    }
     
+    return -1;
+}
 
+int send_disc_nc() {
+    char DISC[5];
+    DISC[0] = FLAG;
+    DISC[1] = A_REC;
+    DISC[2] = C_DISC;
+    DISC[3] = DISC[1]^DISC[2];
+    DISC[4] = FLAG;
+    write(appLayer.fd,DISC,6);
+
+    receive_ua_nc();
+    return 1;
 }
 
 
 
-int send_disc_nc(){
-  char DISC[5];
-  DISC[0] = FLAG;
-  DISC[1] = A_REC;
-  DISC[2] = C_DISC;
-  DISC[3] = DISC[1]^DISC[2];
-  DISC[4] = FLAG;
-  write(appLayer.fd,DISC,6);
+int send_rr(int equalize, char* buf) {
+    char RR[5];
 
-  receive_ua_nc();
-  return 1;
-}
+    RR[0] = FLAG;
+    RR[1] = A_REC;
 
-
-
-int send_rr(int equalize, char* buf){
-
-  char RR[5];
-
-  RR[0] = FLAG;
-  RR[1] = A_REC;
-
-  if(equalize == 0){
-    RR[2] = C_RRI;
-  }
-  else if (equalize == 1){
-
-    if(checkFrames(buf) == 0){
-      RR[2] = C_RRF;
+    if(equalize == 0)
+        RR[2] = C_RRI;
+    else if (equalize == 1) {
+        if(checkFrames(buf) == 0) {
+            RR[2] = C_RRF;
+        }
+        else{
+            RR[2] = C_REJ;
+        }
     }
-    else{
-      RR[2] = C_REJ;
-    }
-  }
 
-  RR[3] = RR[1]^RR[2];
-  RR[4] = FLAG;
+    RR[3] = RR[1]^RR[2];
+    RR[4] = FLAG;
 
-  printf("send_rr: Sending rr number %d\n\n", equalize);
-  write(appLayer.fd,RR, 6);
+    printf("send_rr: Sending rr number %d\n\n", equalize);
+    write(appLayer.fd,RR, 6);
 
-  return 0;
+    return 0;
 }
 
 
@@ -131,45 +129,25 @@ int send_ua() {
 }
 
 
-
-int saveConfigNC()
-{
-   /* if ( (argc < 2) || 
-  	     ((strcmp("/dev/ttyS0", porta)!=0) && 
-  	      (strcmp("/dev/ttyS1", porta)!=0) && 
-  	      (strcmp("/dev/ttyS2", argv[1])!=0) && 
-  	      (strcmp("/dev/ttyS3", argv[1])!=0) && 
-  	      (strcmp("/dev/ttyS4", argv[1])!=0) )) {
-      printf("Usage:\tnserial SerialPort\n\tex: nserial /dev/ttyS1\n");
-      exit(1);
-    }
-
-
-    
-    Open serial port device for reading and writing and not as controlling tty
-    because we don't want to get killed if linenoise sends CTRL-C.
-    */
-  
-
+int saveConfigNC() {
     appLayer.fd = open(ll.port, O_RDWR | O_NOCTTY );
 
-    if (appLayer.fd <0) {perror(ll.port); exit(-1); }
-
-    if ( tcgetattr(appLayer.fd,&oldtio) == -1) { /* save current port settings */
-      perror("tcgetattr");
-      exit(-1);
+    if (appLayer.fd <0) {
+        perror(ll.port); 
+        exit(-1);
     }
 
-    
+    if ( tcgetattr(appLayer.fd,&oldtio) == -1) { /* save current port settings */
+        perror("tcgetattr");
+        exit(-1);
+    }
 
     //RECEIVE SET
-    return newConfigNC();
-    
+    return newConfigNC();    
 }
 
 
-int newConfigNC(){
-
+int newConfigNC() {
     struct termios newtio;
 
     bzero(&newtio, sizeof(newtio));
@@ -183,39 +161,34 @@ int newConfigNC(){
     newtio.c_cc[VTIME]    = 0;   /* inter-character timer unused */
     newtio.c_cc[VMIN]     = 1;   /* blocking read until 5 chars received */
 
-
-
     /* 
     VTIME e VMIN devem ser alterados de forma a proteger com um temporizador a 
     leitura do(s) proximo(s) caracter(es)
     */
 
-
-
     tcflush(appLayer.fd, TCIOFLUSH);
 
     if ( tcsetattr(appLayer.fd,TCSANOW,&newtio) == -1) {
-      perror("tcsetattr");
-      exit(-1);
+        perror("tcsetattr");
+        exit(-1);
     }
 
     printf("New termios structure set\n");
 
     return 0;
- }
+}
 
-int closeConfigNC(){
+int closeConfigNC() {
+    printf("Ending program!\n");
 
-  printf("Ending program!\n");
+    sleep(5);
 
-  sleep(5);
+    if ( tcsetattr(appLayer.fd,TCSANOW,&oldtio) == -1) {
+        perror("tcsetattr");
+        exit(-1);
+    }
 
-  if ( tcsetattr(appLayer.fd,TCSANOW,&oldtio) == -1) {
-    perror("tcsetattr");
-    exit(-1);
-  }
+    close(appLayer.fd);
 
-  close(appLayer.fd);
-  exit(0);
- 
- }
+    exit(0);
+}

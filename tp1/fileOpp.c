@@ -9,18 +9,17 @@
 #include <unistd.h>
 #include "fileOpp.h"
 
-int readData(){
-
+int readData() {
 	FILE *my_file;
 	unsigned int i;
 
 	my_file = fopen (ctrData.filePath, "r");
-	if (my_file == NULL)
-	{
+	if (my_file == NULL) {
 		printf ("File not found!\n");
 		printf ("Or filepath is wrong!\n");
 		return -1;
 	}
+
 	printf("Reading file and saving into struct data\n");
 
 	fseek (my_file, 0, SEEK_END);
@@ -32,23 +31,21 @@ int readData(){
 
 	if(fileData.dataLength % MAX_SIZE_DATA == 0)
 		fileData.numSeg = fileData.dataLength/MAX_SIZE_DATA;
-	else fileData.numSeg = fileData.dataLength/MAX_SIZE_DATA + 1;
+	else 
+		fileData.numSeg = fileData.dataLength/MAX_SIZE_DATA + 1;
 
 	printf("Num segments: %d\n", fileData.numSeg);
 	printf("Length of file: %ld bytes\n", fileData.dataLength);
 
-	for (i = 0; i < fileData.dataLength; i++){
+	for (i = 0; i < fileData.dataLength; i++)
 		fileData.data[i] = getc(my_file);
-	}
 
 	fclose (my_file);
 
 	return 0;
-
 }
 
-int createCtrlPackets(int control){
-
+int createCtrlPackets(int control) {
 	int count = 0;
 	int i = 0;
 
@@ -57,19 +54,19 @@ int createCtrlPackets(int control){
  	lengthValue[1] = (int)((fileData.dataLength >> 16) & 0xFF) ;
  	lengthValue[2] = (int)((fileData.dataLength >> 8) & 0XFF);
  	lengthValue[3] = (int)((fileData.dataLength & 0XFF));
-
 	
 
 	if(control == 0) ctrData.frame[count] = C_START;
-	else ctrData.frame[count] = C_END;
-	count++;
+	else 
+		ctrData.frame[count] = C_END;
 
+	count++;
 	ctrData.frame[count] = C_SIZE_FILE;
 	count++;
 	ctrData.frame[count] = SIZE;
 	count++;
 
-	for(i = 0; i < 4; i++){
+	for(i = 0; i < 4; i++) {
 		ctrData.frame[count] = lengthValue[i];
 		count++;
 	}
@@ -79,7 +76,7 @@ int createCtrlPackets(int control){
 	ctrData.frame[count] = (unsigned char) ctrData.fpLength;
 	count++;
 	
-	for(i = 0; i < ctrData.fpLength; i++){
+	for(i = 0; i < ctrData.fpLength; i++) {
 		ctrData.frame[count] = ctrData.filePath[i];
 		count++;
 	}
@@ -88,63 +85,58 @@ int createCtrlPackets(int control){
 	return 0;
 }
 
-int createDataPacket(int segment){
-
+int createDataPacket(int segment) {
 	int count = 0;
 	int i;
 	unsigned int size = 0;
 
-	if(segment == fileData.numSeg){
-
+	if(segment == fileData.numSeg)
 		size = fileData.dataLength % MAX_SIZE_DATA;
-
-	}
-	else size = MAX_SIZE_DATA;
+	else 
+		size = MAX_SIZE_DATA;
 
 	unsigned char L1 = (short) size%256,L2 = (short) size/256;
 	
 	fileData.frame[count] = C_DATA;
 	count++;
-
 	
 	printf("createDataPackets: segment: %d\n",segment);
 
 	fileData.frame[count] = (unsigned char) segment;
+	
 	count++;
-
 	fileData.frame[count] = L2;
 	count++;
 	fileData.frame[count] = '\0';
 	fileData.frame[count] = (char) L1;
 	count++;
 
-	for(i = 0; i < size ; i++){
-	
+	for(i = 0; i < size ; i++) {	
 		fileData.frame[count] = fileData.data[i+(segment-1) * MAX_SIZE_DATA];
 		count++;
 	}
+
 	fileData.sequenceNumber = count;
 	return 0;
 }
 
-int saveChunk(char* buf, int sequenceNumber){
-
+int saveChunk(char* buf, int sequenceNumber) {
 	FILE *my_file;
 	unsigned int i;
 
-	my_file = fopen (ctrData.filePath, "a");	
-        if(my_file == NULL){
+	my_file = fopen (ctrData.filePath, "a");
+
+    if(my_file == NULL) {
 		printf("Creating and writing on new file with name: %s\n",ctrData.filePath);
 		my_file = fopen(ctrData.filePath,"w+");
-        }else printf("Updating file with name: %s\n",ctrData.filePath);
+    }
+    else 
+    	printf("Updating file with name: %s\n",ctrData.filePath);
 	
 	
-	for(i = 0; i< sequenceNumber; i++){
+	for(i = 0; i< sequenceNumber; i++)
 		putc(buf[i],my_file);
-	}
-
 	
-
 	fclose(my_file);
 
 	return 0;
