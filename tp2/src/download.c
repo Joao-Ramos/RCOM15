@@ -98,14 +98,13 @@ int main(int argc, char** argv){
 	char msg[512];
 	char IP[128];
 	char port[8];
-	char IP_str[INET6_ADDRSTRLEN];
+	char IP_str[INET_ADDRSTRLEN];
 
 	char fname[128];
 	char *split;
 
 	int sockfd, fsockfd;  
 	struct addrinfo host_info, *server_info, *aux, *new_server;
-	struct sockaddr *addr;
 	int getaddr;
 
     if (argc != 2) {  
@@ -152,16 +151,28 @@ int main(int argc, char** argv){
 
 		printf("Host name is:	%s\n", ftps.host);
 
+		struct in_addr  *addr;  
+	    if (aux->ai_family == AF_INET) { 
+	        struct sockaddr_in *ipv = (struct sockaddr_in *)aux->ai_addr; 
+	        addr = &(ipv->sin_addr);  
+	    } 
+	    else { 
+	        struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)aux->ai_addr; 
+	        addr = (struct in_addr *) &(ipv6->sin6_addr); 
+	    }
+        inet_ntop(p->ai_family, addr, IP_str, sizeof ipstr); 
+       /* printf("Server address is:	 %s\n", IP_str);
+
 	    if(aux->ai_family == AF_INET){
 	    	inet_ntop(aux->ai_family, &(((struct sockaddr_in *)addr)->sin_addr),
                     IP_str, sizeof(IP_str));
-	    	printf("Server address is:	 %s\n", IP_str);
+	    	
 	    }
 	    else{
 	    	inet_ntop(aux->ai_family, &(((struct sockaddr_in6 *)addr)->sin6_addr),
-                    IP_str, sizeof(IP_str));
-	    	printf("Server address is:	 %s\n", IP_str);
-	    }
+                    IP6_str, sizeof(IP6_str));
+	    	printf("Server address is:	 %s\n", IP6_str);
+	    }*/
 
 	    break;
 	}
