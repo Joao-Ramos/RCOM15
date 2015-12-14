@@ -98,13 +98,14 @@ int main(int argc, char** argv){
 	char msg[512];
 	char IP[128];
 	char port[8];
+	char IP_str[INET6_ADDRSTRLEN];
 
 	char fname[128];
 	char *split;
 
 	int sockfd, fsockfd;  
 	struct addrinfo host_info, *server_info, *aux, *new_server;
-	struct sockaddr_in *addr;
+	struct sockaddr *addr;
 	int getaddr;
 
     if (argc != 2) {  
@@ -148,6 +149,20 @@ int main(int argc, char** argv){
 			continue;
 	    }
 
+
+		printf("Host name is:	%s\n", ftps.host);
+
+	    if(aux->ai_family == AF_INET){
+	    	inet_ntop(aux->ai_family, &(((struct sockaddr_in *)addr)->sin_addr),
+                    IP_str, sizeof(IP_str));
+	    	printf("Server address is:	 %s\n", IP_str);
+	    }
+	    else{
+	    	inet_ntop(aux->ai_family, &(((struct sockaddr_in6 *)addr)->sin6_addr),
+                    IP_str, sizeof(IP_str));
+	    	printf("Server address is:	 %s\n", IP_str);
+	    }
+
 	    break;
 	}
 
@@ -156,9 +171,7 @@ int main(int argc, char** argv){
 	    exit(2);
 	}
 
-	printf("Host name is:	%s\n", ftps.host);
-	addr = (struct sockaddr_in *)server_info->ai_addr; 
-	printf("Server address is:	 %s\n", inet_ntoa((struct in_addr)addr->sin_addr));
+	
 
     //receive answer from server
     receive_answer(sockfd, buf);
