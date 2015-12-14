@@ -160,9 +160,10 @@ int main(int argc, char** argv){
 	        struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)aux->ai_addr; 
 	        addr = (struct in_addr *) &(ipv6->sin6_addr); 
 	    }
-        inet_ntop(p->ai_family, addr, IP_str, sizeof ipstr); 
-       /* printf("Server address is:	 %s\n", IP_str);
+        inet_ntop(aux->ai_family, addr, IP_str, sizeof IP_str);
 
+        printf("Server address is:	 %s\n", IP_str);
+		/*
 	    if(aux->ai_family == AF_INET){
 	    	inet_ntop(aux->ai_family, &(((struct sockaddr_in *)addr)->sin_addr),
                     IP_str, sizeof(IP_str));
