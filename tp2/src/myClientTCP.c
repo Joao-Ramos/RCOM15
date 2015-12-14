@@ -30,6 +30,7 @@ struct ipStruct{
 	int ip4;
 	int port1;
 	int port2;
+	int fport;
 };
 
 struct ftpStruct ftps;
@@ -52,9 +53,6 @@ int receive_answer(int sockfd, char * buf){
 		{
 			printf("Failed with code %d!\n", code);
 			exit(1);
-		}
-		else{
-			return;
 		}
 	}
 	return 0;
@@ -106,8 +104,10 @@ int main(int argc, char** argv){
 
 	char * buf[SIZE];
 	char msg[SIZE];
+	char IP[128];
+	char port[8];
 
-	int sockfd;  
+	int sockfd, fsockfd;  
 	struct addrinfo host_info, *server_info, *aux, *new_server;
 	struct sockfdaddr_in *addr;
 	int getaddr;
@@ -134,7 +134,7 @@ int main(int argc, char** argv){
     
 	for(aux = server_info; aux != NULL; aux = aux->ai_next) {
 	    if ((sockfd = sockfdet(aux->ai_family, aux->ai_sockfdtype, aux->ai_protocol)) == -1) {
-			perror("Failed to create sockfdet!");
+			perror("Failed to create sockfd!");
 			continue;
 	    }
 
@@ -183,12 +183,57 @@ int main(int argc, char** argv){
 	//receive answer as 193.231.321.31.2312.3 // check page from guião 1ªa aula
 	// res is the buffer where the answer is saved
 	if(sscanf(buf, "%*[^(](%d,%d,%d,%d,%d,%d)\n", ips.ip1, ips.ip2, ips.ip3, ips.ip4, ips.port1, ips.port2) != 6)
-		{
-			printf("Could not read the 6 bytes from the server response: %s\n", res);
-			return -1;
-		}
+	{
+		printf("Failed to read ip from server response! %s\n", buf);
+		exit(1);
+	}
 
+	memset(IP, 0, 128);
+	sprintf(IP,"%d.%d.%d.%d", ips.ip1, ips.ip2, ips.ip3, ips.ip4);
+	printf("\nCopied ip: %s\n", IP);
+	memset(port, 0, 8);
+	ips.fport = 256 * ips.port1 + ips.port2; 
+	sprintf(port,"%d",ips.fport);
+	printf("\nCopied port: %s\n", port);
+
+	if ((getaddr = getaddrinfo(IP, port, &host_info, &new_server)) != 0) {
+	    fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(getaddr));
+	    exit(1);
+	}
+    
+	for(aux = new_server; aux != NULL; aux = aux->ai_next) {
+	    if ((fsockfd = sockfdet(aux->ai_family, aux->ai_sockfdtype, aux->ai_protocol)) == -1) {
+			perror("Failed to create sockfd!");
+			continue;
+	    }
+
+	    if (connect(fsockfd, aux->ai_addr, aux->ai_addrlen) == -1) {
+			close(fsockfd);
+			perror("Failed to connect to host!");
+			continue;
+	    }
+
+	    break;
+	}
+
+	if (aux == NULL) {
+	    fprintf(stderr, "Failed to connect!\n");
+	    exit(2);
+	}
+´/*
+	memset(msg, 0, SIZE);)
+    strcpy(msg, "RETR ");
+    strcat(msg, ftps.url-path);
+	send_answer(fsockfd, msg);
+	receive_answer(fsockfd, buf);
+	*/
+	//get filename
+
+	//save file
+
+	close(fsockfd);
 	close(sockfd);
 	freeaddrinfo(server_info);
+	freeaddrinfo(new_server);
 	exit(0);
 }

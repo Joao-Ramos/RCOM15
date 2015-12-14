@@ -13,7 +13,7 @@
 #include <sys/socket.h>
 
 #define SERVER_PORT "21"
-#define BUF_SIZE 2048
+#define BUF_SIZE 1024
 #define Window_adjust 45
 
 typedef struct
