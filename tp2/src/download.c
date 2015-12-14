@@ -15,7 +15,7 @@ int save_into_file(int fsockfd, char* fname){
 		exit(1);
     }
     else 
-    	printf("\nCreated or erased file %s!\n", fname);
+    	printf("\nCreated or erased file %s!\nStarted retrieving file, please wait...\n", fname);
 	
 	while((received_b = recv(fsockfd, buf,SIZE,0)) != 0){
 		totalReceived += received_b;
@@ -121,7 +121,6 @@ int main(int argc, char** argv){
    
    while( split != NULL ) 
    {
-      printf( " %s\n", split );
       strcpy(fname,split);
       split = strtok(NULL, "/");
    }
