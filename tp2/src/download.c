@@ -6,6 +6,7 @@ int save_into_file(int fsockfd, char* fname){
 	char buf[SIZE];
 	FILE *my_file;
 	int received_b = 0;
+	unsigned long totalReceived = 0;
 
 	my_file = fopen (fname, "w");
 
@@ -17,10 +18,11 @@ int save_into_file(int fsockfd, char* fname){
     	printf("\nCreated or erased file %s!\n", fname);
 	
 	while((received_b = recv(fsockfd, buf,SIZE,0)) != 0){
+		totalReceived += received_b;
 		fwrite(buf,sizeof(char),received_b, my_file);
 	}
 		
-	
+	printf("\n\nSuccess! Received %lu bytes and saved into file %s!\n\n", totalReceived, fname);
 	fclose(my_file);
 
 	return 0;
@@ -97,7 +99,6 @@ int main(int argc, char** argv){
 	char IP[128];
 	char port[8];
 
-	int i, j;
 	char fname[128];
 	char *split;
 
@@ -122,7 +123,7 @@ int main(int argc, char** argv){
    {
       printf( " %s\n", split );
       strcpy(fname,split);
-      split = strtok(NULL, s);
+      split = strtok(NULL, "/");
    }
 
    printf("\n\nDestination filename is: %s\n\n", fname);
